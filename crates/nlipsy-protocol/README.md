@@ -312,9 +312,9 @@ language. What is written here in prose is what that corpus is expected to asser
 
 ## Status
 
-Version 0.1.2. Not yet published to crates.io, and the API is not frozen — `Content`
-and `Wire` replaced a `serde_json::Value` before the first release rather than after
-it, which is the kind of change this status exists to permit. `Message`, `Submessage`,
+Version 0.1.2, the first on crates.io. The API is not frozen — `Content` and `Wire`
+replaced a `serde_json::Value` before the first release rather than after it, which is
+the kind of change this status exists to permit. `Message`, `Submessage`,
 `ParseError` and `Violation` are `#[non_exhaustive]`: construct them through their
 constructors and match them with `..`, because fields will be added.
 

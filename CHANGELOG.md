@@ -12,7 +12,11 @@ as a breaking change and gets its own minor bump.
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
 
-## [0.1.2] — unreleased, date TBD
+## [Unreleased]
+
+Nothing yet.
+
+## [0.1.2] — 2026-10-21
 
 The first release, and it is six crates rather than one. NLIP is a message model with
 several transports over it, so the Rust for it is a message model crate, a runtime core
@@ -684,4 +688,5 @@ conformance cases through the artefact in wasmtime.
   `nlipsy-conformance/component`, which loads a *built* artefact and would otherwise fail
   for want of a file rather than for want of conformance; each exclusion says so.
 
+[Unreleased]: https://github.com/laktoosivaba/nlipsy/compare/v0.1.2...HEAD
 [0.1.2]: https://github.com/laktoosivaba/nlipsy/releases/tag/v0.1.2
