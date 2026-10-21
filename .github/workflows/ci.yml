@@ -277,10 +277,8 @@ jobs:
     name: semver
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    # The baseline is the newest version on crates.io, and there is none yet, so
-    # this can only fail for want of something to compare against.
-    # TODO: remove `continue-on-error` once 0.1.2 is published.
-    continue-on-error: true
+    # The baseline is the newest version on crates.io — 0.1.2 and up — so a breaking
+    # change to a published API fails the pull request that makes it.
     steps:
       - uses: actions/checkout@v4
       # Every publishable member is checked with no `package` input — today
