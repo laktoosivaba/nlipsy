@@ -1,0 +1,134 @@
+# The experimental part of the repository: the WebAssembly component built from
+# `crates/nlipsy-component`, the interface contract it implements (`wit/`), the end-point
+# it is composed with (`examples/echo-endpoint`), and the npm package over it
+# (`javascript/`).
+#
+# A workflow of its own rather than two more jobs in `ci.yml`, and the reason is what a
+# red run would mean. These jobs need what nothing else in the repository does — a pinned
+# nightly with the `wasm32-wasip3` target, Node, Bun, `wasm-tools` and `wac` — and what
+# they prove is the experimental part, which nobody runs in production yet. A failure
+# here is therefore a fact about the component or about jco, and it must not be the
+# status a crate release waits on: `ci.yml` is that status, and it is the only workflow a
+# `v*` tag triggers. The published crates carry no wasm dependency at all, so leaving
+# this out of the gate leaves nothing they ship unchecked.
+#
+# It still runs on every push to `master` and on every pull request, so a change that
+# breaks the component is seen on the change that broke it. The weekly run is for the
+# inputs that move without a push: `cargo install` takes the newest `wasm-tools` and
+# `wac`, and Node 26 and Bun 1.4 resolve to their newest patch. `workflow_dispatch` is
+# for running it by hand, after a jco release say.
+#
+# The two jobs moved here from `ci.yml` unchanged, comments included, and `ci.yml`'s
+# header on how actions are pinned holds here too.
+
+name: Component
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  # Monday, off the hour: GitHub delays scheduled runs that start on one.
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+# One run per ref, as in `ci.yml`. The group is keyed on the workflow's name, so this
+# workflow and that one never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  component:
+    name: component
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Two toolchains, and the first one is the new part. The *artefact* is built for
+      # `wasm32-wasip3`, whose `rust-std` ships on nightly until Rust 1.100 makes the
+      # target stable (2026-11-12); the corpus host, clippy and the tests stay stable's.
+      # The nightly is pinned to the same date the `Makefile`'s `COMPONENT_TOOLCHAIN`
+      # defaults to, so the two cannot drift apart, and `make check-component` reaches it
+      # by name with `cargo +…`. On 2026-11-12 both become `stable` and this step goes.
+      #
+      # Nightly **first**: `dtolnay/rust-toolchain` makes the toolchain it installed the
+      # default, so the last one to run is what a bare `cargo` picks — and that has to be
+      # stable, since only one line of `check-component` wants the nightly.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-15
+          targets: wasm32-wasip3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # `cargo install` rather than `bytecodealliance/actions/wasm-tools/setup@v1`: the
+      # action's input names are not something this workflow can cite from memory, and a
+      # `--locked` install of a tool that is already in this job's cargo cache is cheap.
+      # It is the same command `wit/README.md` §2 tells a contributor to run.
+      - run: cargo install wasm-tools --locked
+      # And the composer, for the same reason and by the same route: `check-component`
+      # now also builds `examples/echo-endpoint` and plugs it into the engine, so that
+      # the artefact a runtime serves on its own is built by the same target that
+      # checks the engine. `wac plug` is the one command it takes.
+      - run: cargo install wac-cli --locked
+      # The contract first: the file parses and the world resolves. It is cheap, it needs
+      # only the tool above, and a failure here explains every failure below it.
+      - run: make check-wit
+      # Then the guest: build on the pinned nightly, validate, read the world back —
+      # which is also what shows the imports are WASI 0.3 and nothing else — compose it
+      # with `examples/echo-endpoint`, and run the 125 cases of `conformance/` through
+      # the artefact in wasmtime, linked with `wasmtime_wasi::p3` and
+      # `wasmtime_wasi_http::p3`, beside the HTTP-level tests through
+      # `wasi:http/handler` and two requests through the composition. The proof of the
+      # component that needs no JavaScript at all.
+      - run: make check-component
+      # Informational only. The artefact has no size budget; the number is printed so
+      # that a jump in its size is noticed in a log rather than discovered by a
+      # consumer.
+      - name: artefact size
+        run: |
+          artefact=target/wasm32-wasip3/component/nlipsy_component.wasm
+          composed=target/wasm32-wasip3/component/nlipsy_echo.wasm
+          ls -l "$artefact" "$composed"
+          echo "raw bytes: $(wc -c < "$artefact")"
+          echo "composed raw bytes: $(wc -c < "$composed")"
+
+  javascript:
+    name: javascript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The same two toolchains as the `component` job, in the same order and for the
+      # same reason: the *artefact* is built for `wasm32-wasip3`, whose `rust-std` ships
+      # on nightly until Rust 1.100 makes the target stable (2026-11-12), and the nightly
+      # is pinned to the date the `Makefile`'s `COMPONENT_TOOLCHAIN` defaults to so the
+      # two cannot drift. Nightly first, so that a bare `cargo` picks stable.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-15
+          targets: wasm32-wasip3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Node 26 is the floor the package declares: jco's glue for this component uses
+      # JSPI (`WebAssembly.Suspending`), and the package is ESM-only because the
+      # component is instantiated by a top-level `await`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: javascript/package-lock.json
+      # Bun runs the corpus through the package too, and `test/node/bun.test.mjs` is the
+      # test that says so. Without it that one suite skips with its reason printed, which
+      # is a weaker gate than the one this workflow can afford.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4'
+      # `make check-js` builds the component with the pinned nightly (through `make
+      # component`), transpiles it with jco, compiles the wrapper, type-checks the
+      # examples against the package's own `exports`, runs the glue's suites and all 125
+      # conformance cases in Node and in Bun, and packs the tarball dry. The three seams
+      # jco cannot run are `make check-js-e2e`, which is red by design and is not here.
+      - run: make check-js

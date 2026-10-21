@@ -7,11 +7,11 @@ first crates.io release is 0.1.2.
 Six crates are published from this workspace — `nlipsy-protocol`, the message model,
 `nlipsy-core`, the runtime core over it, `nlipsy-http`, ECMA-431 §6 as values,
 `nlipsy-http-client` and `nlipsy-server`, the two ends of that binding, and `nlipsy`,
-the facade over them — and one member, `nlipsy-conformance`, is `publish = false` and
-never leaves the repository. The version lives in the root manifest's
-`[workspace.package]`, so a release is one operation over all six published crates: they
-share a version and go out together. These steps assume a clean checkout of
-`master` with everything to be released already merged.
+the facade over them — and three members, `nlipsy-conformance`, `nlipsy-component` and
+`echo-endpoint`, are `publish = false` and never leave the repository. The version lives
+in the root manifest's `[workspace.package]`, so a release is one operation over all six
+published crates: they share a version and go out together. These steps assume a clean
+checkout of `master` with everything to be released already merged.
 
 ## Publishing order, and why it is not a preference
 
@@ -265,9 +265,12 @@ second `nlipsy-<standard>` crate joins `nlipsy-http` and the order stops being o
         git push origin master --follow-tags
         ```
 
-        One tag covers the release, because one version does. `v*` tags are a CI
-        trigger, so the tag build is also the confirmation that the released tree is
-        the one that passes.
+        One tag covers the release, because one version does. `v*` tags trigger
+        `.github/workflows/ci.yml`, so the tag build is also the confirmation that the
+        released tree is the one that passes. They do not trigger
+        `.github/workflows/component.yml`, and nothing in this checklist waits on it:
+        that workflow proves the experimental WebAssembly component and npm package,
+        which no published crate depends on.
 
 11. [ ] **Draft the GitHub release** against that tag, with the changelog section for
         this version as the body.

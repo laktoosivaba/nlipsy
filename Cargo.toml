@@ -4,8 +4,9 @@
 # feature unification it is built with. Declaring the root here means the members
 # below are captured by this workspace and no other, wherever the checkout sits.
 #
-# The root is a virtual manifest: no package of its own, so `--workspace` is what
-# reaches the members and there is no root crate for a bare `cargo test` to stop at.
+# The root is a virtual manifest: no package of its own, so there is no root crate for a
+# bare `cargo test` to stop at — it reaches `default-members`, below the list — and
+# `--workspace` is what reaches every member.
 [workspace]
 members = [
     "crates/nlipsy-protocol",
@@ -21,6 +22,25 @@ members = [
     # in it is caught by the same gate as a break anywhere else rather than on the day
     # somebody builds the composition.
     "examples/echo-endpoint",
+]
+# What a bare `cargo build` or `cargo test` at the root covers: the six published crates
+# and the corpus runner — the native workspace, which is what this repository ships and
+# what a deployment runs. `crates/nlipsy-component` and `examples/echo-endpoint` are the
+# experimental WebAssembly part (`README.md`, last section): still members, so that
+# `--workspace` checks them on the host, but built for their own target by name (`-p`)
+# or by `make check-component`, and never by a command that did not ask for them.
+#
+# Nothing in the `Makefile` or in CI leans on this list: every build and test there
+# names `--workspace` or `-p`, so what it checks is what it says, and `cargo deny` reads
+# the same graph with the list as without it.
+default-members = [
+    "crates/nlipsy-protocol",
+    "crates/nlipsy-core",
+    "crates/nlipsy-http",
+    "crates/nlipsy-http-client",
+    "crates/nlipsy-server",
+    "crates/nlipsy",
+    "crates/conformance",
 ]
 resolver = "3"
 

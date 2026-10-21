@@ -34,21 +34,6 @@ the first version intended for crates.io.
 
 Everything here is `### Added`, since there is nothing to change or remove yet.
 
-The npm package **`nlipsy`**, with its own version and its own changelog, is
-[`javascript/`](javascript/) and is **not published yet**;
-[`javascript/CHANGELOG.md`](javascript/CHANGELOG.md) is its own log. `make check-js` is
-its gate and it is on: the glue's suites and all 125 conformance cases pass through the
-package in Node and in Bun. What does not run yet is three seams of jco —
-`wasi:http/handler`, `wasi:http/client`, and a host callback suspended across a turn of
-the event loop — whose suites are written, skipped with the reason printed, and run by
-`make check-js-e2e`, which is red by design: measured on 2026-10-21 against jco 1.39.0
-and preview3-shim 0.11.0, while wasmtime 48 runs every one of these paths today,
-`wasi:http@0.3.0` included ([`javascript/README.md`](javascript/README.md), *What runs
-today*). The package is not a crate; what it wraps is `crates/nlipsy-component`, which is
-`publish = false`. Nothing in this section depends on it: the crates and the component are
-proved by `make check` and `make check-component`, which runs all 125 conformance cases
-through the artefact in wasmtime.
-
 ### `nlipsy-protocol` — the message model, ECMA-430 clause 5
 
 - **`Message`, `Submessage` and `Format`** — the latter exhaustive over §5.3 Table 1,
@@ -606,28 +591,47 @@ through the artefact in wasmtime.
 
 ### The interface contract and the component
 
+The npm package **`nlipsy`**, with its own version and its own changelog, is
+[`javascript/`](javascript/) and is **not published yet**;
+[`javascript/CHANGELOG.md`](javascript/CHANGELOG.md) is its own log. `make check-js` is
+its gate and it is on: the glue's suites and all 125 conformance cases pass through the
+package in Node and in Bun. What does not run yet is three seams of jco —
+`wasi:http/handler`, `wasi:http/client`, and a host callback suspended across a turn of
+the event loop — whose suites are written, skipped with the reason printed, and run by
+`make check-js-e2e`, which is red by design: measured on 2026-10-21 against jco 1.39.0
+and preview3-shim 0.11.0, while wasmtime 48 runs every one of these paths today,
+`wasi:http@0.3.0` included ([`javascript/README.md`](javascript/README.md), *What runs
+today*). The package is not a crate; what it wraps is `crates/nlipsy-component`, which is
+`publish = false`. Nothing else in this release depends on it: the crates and the
+component are proved by `make check` and `make check-component`, which runs all 125
+conformance cases through the artefact in wasmtime.
+
 - **`wit/nlipsy.wit`** — the language-neutral *interface* contract, the way
   `conformance/cases/` is the behaviour one: the message model and the clause-6
-  vocabulary as WIT, ECMA-430 clause 5 and ECMA-431 §6 as exported functions, clause 6 as
-  a `server` resource and the client half as a `client` one, and the host's context,
-  token authority, handler, transport and record sink as imported resources. Every item
-  cites its clause and the Rust item it is lifted from; `wit/README.md` holds the seed
-  table, the proof that every corpus case field is expressible, and the clause-by-clause
-  review. `make check-wit` resolves it.
+  vocabulary as WIT: ECMA-430 clause 5, clause 6's steps and the client half as exported
+  functions in three interfaces — `protocol`, `engine` and `client` — and the host's
+  end-point, layers, token authority, transport and record sink as five imported
+  interfaces of plain functions. No resource crosses the boundary in either direction:
+  the context is a record by value, keyed on an `exchange` number. Every item cites its
+  clause and the Rust item it is lifted from; `wit/README.md` holds the design, the seed
+  table and the proof that every corpus case field is expressible. `make check-wit`
+  resolves it and checks every seed.
 - **`crates/nlipsy-component`, never published** — the `wit-bindgen` guest of that
   contract, built for `wasm32-wasip3`, where `cargo build` of a `cdylib` emits a
   component with no `cargo-component` and no adapter of any kind, and where `std` links
-  WASI **0.3** and nothing else: the artefact's imports are `wasi:cli@0.3.0` and
-  `wasi:clocks@0.3.0`, with no `wasi:io`, because 0.3 carries streams natively. The
+  WASI **0.3** and nothing else: the artefact's imports are `wasi:cli@0.3.0`,
+  `wasi:clocks@0.3.0`, `wasi:http@0.3.0` and `wasi:random@0.3.0`, with no `wasi:io`,
+  because 0.3 carries streams natively, and it exports `wasi:http/handler@0.3.0`, so
+  the ECMA-431 §6 binding is inside it. The
   target needs a nightly until Rust 1.100 (2026-11-12), which is why the `Makefile` pins
   one in `COMPONENT_TOOLCHAIN`; the crate's own `rust-version` is what the *source*
   needs, not what the target does. It holds no rule: every
   export is `nlipsy-protocol`'s, `nlipsy-core`'s or `nlipsy-http`'s, re-spelled in the
-  contract's vocabulary. What it does hold is the one thing a guest must decide — how the
-  host's `context` reaches a synchronous clause-6 step — and the answer is the engine's
-  own type map: each export builds one `Context` per call and puts the borrow's handle in
-  `Context::extensions`, so two exchanges in flight cannot see each other's context by
-  construction. It declares its own `rust-version`, because wit-bindgen 0.62 and edition
+  contract's vocabulary. What it does hold is the composition — the host's layers over the host's
+  handler, with `Conformity::finish` at the bottom — and the one thing a guest must
+  decide, how the host's `context` reaches a synchronous clause-6 step: each export
+  builds one `Context` per call from the record the host passed by value, so two
+  exchanges in flight cannot see each other's context by construction. It declares its own `rust-version`, because wit-bindgen 0.62 and edition
   2024 are past 1.85 and nothing published depends on it; every MSRV check excludes it by
   name. The `component` build profile is in the root manifest, because Cargo reads
   `[profile.*]` only there.
@@ -661,17 +665,22 @@ through the artefact in wasmtime.
 - **Nine members, six published.** `nlipsy-protocol`, `nlipsy-core`, `nlipsy-http`,
   `nlipsy-http-client`, `nlipsy-server` and `nlipsy` go to crates.io in that order —
   which is the order they depend on each other — and `nlipsy-conformance`,
-  `nlipsy-component` and `echo-endpoint` never leave the repository.
+  `nlipsy-component` and `echo-endpoint` never leave the repository. A bare
+  `cargo build` or `cargo test` at the root covers the six and the corpus runner, the
+  manifest's `default-members`; the component and the example are built by name.
 - **MSRV 1.85**, verified in CI against the value declared once in
   `[workspace.package]`. `nlipsy-component` and `echo-endpoint` declare their own and are
   excluded by name; both are unpublished, so their floors are promises to nobody.
 - **Dual MIT / Apache-2.0 licence.**
-- **CI**: rustfmt, clippy over all targets and features, tests on Linux, macOS and
-  Windows with and without features, the facade's features one at a time, the MSRV
-  build, rustdoc the way docs.rs builds it, `wasm32-unknown-unknown` over the members
-  that promise it, the interface contract and the component with the corpus through it,
-  `cargo-deny`, `cargo-machete`, `cargo-semver-checks` and `typos`. One feature is kept
-  out of every `--all-features` line and named separately instead —
+- **CI**, in two workflows. `ci.yml` is rustfmt, clippy over all targets and features,
+  tests on Linux, macOS and Windows with and without features, the facade's features one
+  at a time, the MSRV build, rustdoc the way docs.rs builds it, `wasm32-unknown-unknown`
+  over the members that promise it, `cargo-deny`, `cargo-machete`, `cargo-semver-checks`
+  and `typos`: what a release waits on, and the only workflow a `v*` tag triggers.
+  `component.yml` is the interface contract, the component with the corpus through it,
+  and the npm package — on every push to `master`, every pull request, weekly and by
+  hand — and gates no release, because what it proves is the experimental part. One
+  feature is kept out of every `--all-features` line and named separately instead —
   `nlipsy-conformance/component`, which loads a *built* artefact and would otherwise fail
   for want of a file rather than for want of conformance; each exclusion says so.
 

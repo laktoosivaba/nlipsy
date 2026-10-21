@@ -37,8 +37,8 @@ interface types {
   ///
   /// ECMA-404's number space, as `serde_json::Number` already models it: an integer
   /// that fits `i64` or `u64`, otherwise a finite double. NaN and the infinities are
-  /// not in it and cannot arrive — `Content::Number`
-  /// (`crates/nlipsy-protocol/src/content.rs:109`),
+  /// not in it and cannot arrive —
+  /// `crates/nlipsy-protocol/src/content.rs::Content::Number`,
   /// ECMA-432 §7.1 refuses them at the CBOR decoder.
   variant number {
     /// A signed integer — anything `i64` holds.
@@ -50,20 +50,21 @@ interface types {
     float(f64),
   }
 
-  /// One content value — ECMA-430 §5.1.4, `crates/nlipsy-protocol/src/content.rs:109`.
+  /// One content value — ECMA-430 §5.1.4,
+  /// `crates/nlipsy-protocol/src/content.rs::Content`.
   ///
   /// The seven variants of `Content` with the two recursive ones flattened: WIT has no
   /// recursive types, so `Content::Array` and `Content::Object` cross as
   /// `structured(string)`.
   ///
   /// **The `structured` boundary.** The string is the *canonical JSON text* of the
-  /// array or object — exactly what `Content::to_json_value`
-  /// (`crates/nlipsy-protocol/src/content.rs:201`) produces, which is the lossy
-  /// direction the crate already defines: a byte string nested inside structured
-  /// content becomes base64 text there, because JSON cannot hold it either. No corpus
-  /// case has nested bytes, and if one ever arrives the corpus needs a convention before
-  /// this contract does. Object keys are sorted, because
-  /// `Content::Object` is a `BTreeMap` and ECMA-404 makes an object unordered.
+  /// array or object — exactly what
+  /// `crates/nlipsy-protocol/src/content.rs::Content::to_json_value` produces, which is
+  /// the lossy direction the crate already defines: a byte string nested inside
+  /// structured content becomes base64 text there, because JSON cannot hold it either. No
+  /// corpus case has nested bytes, and if one ever arrives the corpus needs a convention
+  /// before this contract does. Object keys are sorted, because `Content::Object` is a
+  /// `BTreeMap` and ECMA-404 makes an object unordered.
   ///
   /// Producing that string is the *host's* side of a private glue encoding, never a
   /// user's: the wrapper builds it with `JSON.stringify` and the Rust corpus host with
@@ -97,8 +98,9 @@ interface types {
     structured(string),
   }
 
-  /// The six values of ECMA-430 Table 1 — `crates/nlipsy-protocol/src/message.rs:39`,
-  /// in the order the table lists them (`Format::ALL`, `:58`).
+  /// The six values of ECMA-430 Table 1 —
+  /// `crates/nlipsy-protocol/src/message.rs::Format`, in the order the table lists them
+  /// (`crates/nlipsy-protocol/src/message.rs::Format::ALL`).
   ///
   /// A closed enum and not a `string`, because a string at this boundary admits a
   /// value the model cannot hold and the guest would have nowhere to report it: a
@@ -106,7 +108,7 @@ interface types {
   /// silently. jco renders it as the string union
   /// `'text' | 'token' | …`, so the JavaScript shape does not move. Casing is settled
   /// before the boundary: §5 makes the value case-insensitive and `decode` lower-cases
-  /// it (`Format::parse`, `message.rs:84`).
+  /// it (`crates/nlipsy-protocol/src/message.rs::Format::parse`).
   enum format {
     /// Natural language text; the subformat names the language.
     text,
@@ -124,7 +126,7 @@ interface types {
   }
 
   /// One submessage of the `submessages` array — ECMA-430 §5.2,
-  /// `crates/nlipsy-protocol/src/message.rs:131`.
+  /// `crates/nlipsy-protocol/src/message.rs::Submessage`.
   record submessage {
     /// §5.2.1's optional label. Absent on most submessages.
     label: option<string>,
@@ -139,7 +141,7 @@ interface types {
   }
 
   /// One NLIP message — ECMA-430 §5.1,
-  /// `crates/nlipsy-protocol/src/message.rs:288`.
+  /// `crates/nlipsy-protocol/src/message.rs::Message`.
   ///
   /// The leading object §5 ¶2 calls "the first submessage" is spelled as the message's
   /// own `format`/`subformat`/`content`/`label`, exactly as the Rust type spells it,
@@ -167,7 +169,7 @@ interface types {
   }
 
   /// Which encoding a message came from, or goes to —
-  /// `crates/nlipsy-protocol/src/content.rs:78`.
+  /// `crates/nlipsy-protocol/src/content.rs::Wire`.
   ///
   /// The only thing it changes is how `binary` content is spelled, and a decoder
   /// cannot tell the two apart from the document alone: a JSON string under
@@ -185,11 +187,11 @@ interface types {
   /// What a document that cannot be decoded at all was wrong about.
   ///
   /// The corpus's fixed vocabulary — `conformance/README.md`, "Expectations" — as
-  /// `crates/conformance/src/lib.rs:289` (`describe`) maps `ParseError`
-  /// (`crates/nlipsy-protocol/src/error.rs:26`) onto it. It is the vocabulary rather
-  /// than the Rust variants because the corpus names what an implementation must
-  /// *distinguish*: ECMA-432 §7.1's "a frame carries one message and no more" is a
-  /// `cbor` failure here, not a kind of its own.
+  /// `crates/conformance/src/lib.rs::describe` maps
+  /// `crates/nlipsy-protocol/src/error.rs::ParseError` onto it. It is the vocabulary
+  /// rather than the Rust variants because the corpus names what an implementation must
+  /// *distinguish*: ECMA-432 §7.1's "a frame carries one message and no more" is a `cbor`
+  /// failure here, not a kind of its own.
   enum parse-error-kind {
     /// The body is not JSON at all. `path` is always `$`.
     invalid-json,
@@ -224,9 +226,9 @@ interface types {
   record parse-error {
     /// What was wrong.
     kind: parse-error-kind,
-    /// Where in the document, as `ParseError::path`
-    /// (`crates/nlipsy-protocol/src/error.rs:249`) spells it: `$` for the first
-    /// submessage or the document as a whole, `submessages[i]` for the i-th
+    /// Where in the document, as
+    /// `crates/nlipsy-protocol/src/error.rs::ParseError::path` spells it: `$` for the
+    /// first submessage or the document as a whole, `submessages[i]` for the i-th
     /// submessage, counted from zero.
     path: string,
     /// The field the kind is about, in the canonical lower-case spelling
@@ -239,7 +241,7 @@ interface types {
   }
 
   /// How badly a semantic rule of clause 5 was broken —
-  /// `crates/nlipsy-protocol/src/error.rs:272`.
+  /// `crates/nlipsy-protocol/src/error.rs::Severity`.
   enum severity {
     /// The message cannot be interpreted as written.
     error,
@@ -247,7 +249,7 @@ interface types {
     warning,
   }
 
-  /// One clause-5 finding — `crates/nlipsy-protocol/src/error.rs:299`.
+  /// One clause-5 finding — `crates/nlipsy-protocol/src/error.rs::Violation`.
   ///
   /// A finding, not a failure: the message decoded. What happens to it is
   /// `disposition`'s question.
@@ -264,7 +266,7 @@ interface types {
   }
 
   /// What a clause-5 finding *does* to an exchange —
-  /// `crates/nlipsy-core/src/conformity.rs:138`.
+  /// `crates/nlipsy-core/src/conformity.rs::Disposition`.
   ///
   /// Not in ECMA-430: the standard states the rules and says nothing about the
   /// consequence, so this is the deployment's choice and travels as configuration.
@@ -279,7 +281,7 @@ interface types {
   }
 
   /// One finding and what the policy decided about it —
-  /// `crates/nlipsy-core/src/conformity.rs:246`.
+  /// `crates/nlipsy-core/src/conformity.rs::Finding`.
   record finding {
     /// What the message model said.
     violation: violation,
@@ -288,7 +290,7 @@ interface types {
   }
 
   /// How many token submessages arrived, and how many were allowed —
-  /// `Rejected::TooManyTokens` (`crates/nlipsy-core/src/conformity.rs:334`).
+  /// `crates/nlipsy-core/src/conformity.rs::Rejected::TooManyTokens`.
   ///
   /// The two field names are the seed's own. `count` is how many token submessages the
   /// request carried, the first submessage included — the number
@@ -307,7 +309,7 @@ interface types {
   }
 
   /// A request that cannot be answered conformingly —
-  /// `crates/nlipsy-core/src/conformity.rs:325`.
+  /// `crates/nlipsy-core/src/conformity.rs::Rejected`.
   ///
   /// Both cases describe the *peer's* message rather than the end-point's state, which
   /// is why the text of either is safe to hand back to the peer.
@@ -325,7 +327,7 @@ interface types {
   }
 
   /// A reply that has been through `engine.finish` —
-  /// `crates/nlipsy-core/src/conformity.rs:359`.
+  /// `crates/nlipsy-core/src/conformity.rs::Finished`.
   ///
   /// It is what `engine.finish` returns, and nothing else produces one: no import hands a
   /// `finished` back, so there is no way for a host to present a reply that skipped the
@@ -338,15 +340,15 @@ interface types {
     /// What clause 5 said about the end-point's own reply, and what was done about it.
     findings: list<finding>,
     /// `true` when clause 5 rejected the end-point's own answer and `message` is the
-    /// replacement rather than the answer — `Finished::withheld`
-    /// (`crates/nlipsy-core/src/conformity.rs:374`), which derives it from `findings`.
-    /// Carried as a field because the boundary has no methods; it is the value the
-    /// engine's own `finish` computed and no caller supplies one.
+    /// replacement rather than the answer —
+    /// `crates/nlipsy-core/src/conformity.rs::Finished::withheld`, which derives it from
+    /// `findings`. Carried as a field because the boundary has no methods; it is the
+    /// value the engine's own `finish` computed and no caller supplies one.
     withheld: bool,
   }
 
   /// Which of ECMA-430's two reserved token kinds —
-  /// `crates/nlipsy-core/src/token.rs:27`.
+  /// `crates/nlipsy-core/src/token.rs::TokenKind`.
   ///
   /// Exhaustive: §5.3 reserves `authentication` and `conversation` and §6.2 leaves
   /// every other subformat to the application, so a third case would be a token this
@@ -359,7 +361,7 @@ interface types {
   }
 
   /// What a runtime knows about one exchange, and hands to everything below it —
-  /// `Context` (`crates/nlipsy-core/src/context.rs:27`), **by value**.
+  /// `crates/nlipsy-core/src/context.rs::Context`, **by value**.
   ///
   /// A record and not a host resource: the host gets an `exchange` number and the guest
   /// keeps nothing, so nothing is borrowed, nothing leaks, no constructor crosses and the
@@ -375,18 +377,18 @@ interface types {
     /// all the protocol has any use for.
     ///
     /// An HTTP binding fills it when its runtime gives it one, and they differ: the axum
-    /// binding has the peer's address and uses it without the port (`Peer::label`,
-    /// `crates/nlipsy-server/src/server.rs:318`), while `wasi:http@0.3.0` carries no
-    /// remote address at all, so the guest's binding answers `none`. A host must
-    /// therefore read `none` as **"this binding does not know"** and never as "there is
-    /// no peer": a layer that throttles or audits by peer and finds `none` is under a
+    /// binding has the peer's address and uses it without the port
+    /// (`crates/nlipsy-server/src/server.rs::Peer::label`), while `wasi:http@0.3.0`
+    /// carries no remote address at all, so the guest's binding answers `none`. A host
+    /// must therefore read `none` as **"this binding does not know"** and never as "there
+    /// is no peer": a layer that throttles or audits by peer and finds `none` is under a
     /// binding that cannot supply one, and a deployment behind a proxy reads a forwarded
     /// header in a layer of its own.
     peer: option<string>,
     /// The identifier for this one request/response pair. Normative over AMQP
     /// (ECMA-433 §6.1.4) and a convention over HTTP (`x-nlip-correlator`,
-    /// `crates/nlipsy-http/src/binding.rs:37`), which is exactly why it lives here
-    /// rather than in a transport signature.
+    /// `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER`), which is exactly why it
+    /// lives here rather than in a transport signature.
     correlator: option<string>,
     /// The number that names this exchange, for a host that keeps state about one.
     ///
@@ -405,7 +407,8 @@ interface types {
   }
 
   /// What a layer's `before` half answers with — the boundary-crossable split of
-  /// `Middleware` and `Next` (`crates/nlipsy-core/src/middleware.rs:90`, `:139`).
+  /// `crates/nlipsy-core/src/middleware.rs::Middleware` and
+  /// `crates/nlipsy-core/src/middleware.rs::Next`.
   ///
   /// A Rust layer is one "around" call that receives `next` and chooses whether to run
   /// it. A `next` cannot cross this boundary — it would be a type an export defines
@@ -424,9 +427,9 @@ interface types {
   }
 
   /// What an end-point does about the optional parts of clause 6 —
-  /// `ConformityConfig` (`crates/nlipsy-core/src/conformity.rs:79`).
-  /// `engine.default-config` is its `Default` (`:92`), which is what the corpus's
-  /// `endpoint.config` block omits.
+  /// `crates/nlipsy-core/src/conformity.rs::ConformityConfig`. `engine.default-config` is
+  /// its `Default`, `crates/nlipsy-core/src/conformity.rs::ConformityConfig::default`,
+  /// which is what the corpus's `endpoint.config` block omits.
   record config {
     /// §6.2.1 — issue a `conversation` token and keep confirming it. Off by default:
     /// §6.2's echo is the only mandatory half of the clause.
@@ -436,12 +439,13 @@ interface types {
     /// Upper bound on the token submessages one request may carry, first submessage
     /// included. Exceeding it refuses the request rather than truncating the echo —
     /// see `rejected.too-many-tokens`. 32 by default —
-    /// `DEFAULT_MAX_TOKENS_PER_MESSAGE` (`crates/nlipsy-core/src/conformity.rs:70`).
+    /// `crates/nlipsy-core/src/conformity.rs::DEFAULT_MAX_TOKENS_PER_MESSAGE`.
     max-tokens-per-message: u32,
   }
 
   /// What each severity does, in one direction —
-  /// `crates/nlipsy-core/src/conformity.rs:166`. Default `reject` / `log` (`:177`).
+  /// `crates/nlipsy-core/src/conformity.rs::Policy`. Default `reject` / `log`, from
+  /// `crates/nlipsy-core/src/conformity.rs::Policy::default`.
   record policy {
     /// What to do with a finding the message model calls fatal.
     on-error: disposition,
@@ -449,7 +453,7 @@ interface types {
     on-warning: disposition,
   }
 
-  /// The two directions' policies — `crates/nlipsy-core/src/conformity.rs:224`.
+  /// The two directions' policies — `crates/nlipsy-core/src/conformity.rs::Rejection`.
   ///
   /// Two rather than one, because an end-point that tolerates a peer's warnings has no
   /// reason to tolerate its own.
@@ -461,7 +465,7 @@ interface types {
   }
 
   /// The status codes this binding answers with —
-  /// `crates/nlipsy-http/src/status.rs:37`.
+  /// `crates/nlipsy-http/src/status.rs::StatusMap`.
   ///
   /// The binding is in the guest, so the map is *configuration* rather than a value a
   /// host reads to write a status line itself: a field of `http-options`, read out of the
@@ -485,7 +489,7 @@ interface types {
     /// `endpoint-error.unsupported` — never answerable as written. `501`.
     unsupported: u16,
     /// `endpoint-error.unavailable`. `503`, with `Retry-After` when the error named a
-    /// delay (`retry_after_value`, `crates/nlipsy-http/src/retry.rs:26`).
+    /// delay (`crates/nlipsy-http/src/retry.rs::retry_after_value`).
     unavailable: u16,
     /// `endpoint-error.timed-out`. `504` rather than `408`: the peer sent its request
     /// promptly and it is this end-point that failed to finish.
@@ -523,8 +527,8 @@ interface types {
     credentials: bool,
   }
 
-  /// What the guest's ECMA-431 §6 binding does, as values — `ServerConfig`
-  /// (`crates/nlipsy-server/src/server.rs:122`), which is the axum binding's own
+  /// What the guest's ECMA-431 §6 binding does, as values —
+  /// `crates/nlipsy-server/src/server.rs::ServerConfig`, which is the axum binding's own
   /// configuration and what this one is transposed from.
   ///
   /// Everything here is *protocol-adjacent*: the body limit, the correlator's spelling
@@ -533,15 +537,15 @@ interface types {
   /// whatever serves the component. `engine.default-http-options` is the reference
   /// server's answer to all four, so a host that changes nothing writes nothing.
   record http-options {
-    /// Largest request body read, in bytes — `DEFAULT_MAX_REQUEST_BODY_SIZE`
-    /// (`crates/nlipsy-http/src/binding.rs:68`) by default.
+    /// Largest request body read, in bytes —
+    /// `crates/nlipsy-http/src/binding.rs::DEFAULT_MAX_REQUEST_BODY_SIZE` by default.
     ///
     /// Enforced *while the body is read*, so that exceeding it is answered with
     /// `too_large`'s message at `status.too-large` rather than with a framework's plain
     /// text — and so that the bytes past the limit are never held.
     max-request-body-size: u32,
-    /// Header the correlator travels in, or `none` to carry none —
-    /// `x-nlip-correlator` (`crates/nlipsy-http/src/binding.rs:37`) by default.
+    /// Header the correlator travels in, or `none` to carry none — by default
+    /// `x-nlip-correlator`, `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER`.
     ///
     /// The peer's value is reused when it is sane and one is minted otherwise; with
     /// `none` no header is read and none is echoed, and `context.correlator` is still
@@ -556,7 +560,7 @@ interface types {
   }
 
   /// A dependency that is down or has asked for a delay —
-  /// `crates/nlipsy-core/src/endpoint.rs:143`, `EndpointError::Unavailable`.
+  /// `crates/nlipsy-core/src/endpoint.rs::EndpointError::Unavailable`.
   record unavailable {
     /// How long it asked to wait, in milliseconds, when it said so. Durations cross
     /// this boundary as milliseconds throughout.
@@ -566,7 +570,7 @@ interface types {
   }
 
   /// Why an end-point — or a layer above it — could not answer —
-  /// `crates/nlipsy-core/src/endpoint.rs:143`.
+  /// `crates/nlipsy-core/src/endpoint.rs::EndpointError`.
   ///
   /// A JavaScript exception thrown by a user's handler is not one of these: the
   /// wrapper catches it, maps it to `internal`, and surfaces it on the JavaScript side
@@ -590,7 +594,7 @@ interface types {
     timed-out(u64),
   }
 
-  /// How one exchange ended — `crates/nlipsy-core/src/serve.rs:64`.
+  /// How one exchange ended — `crates/nlipsy-core/src/serve.rs::Outcome`.
   ///
   /// Every one of the four still produces a reply: `served.reply` is a message on all
   /// of them, because a peer reading only the payload has to learn what happened.
@@ -607,7 +611,7 @@ interface types {
   }
 
   /// What clause 6 still owes the peer on a reply a binding built itself —
-  /// `crates/nlipsy-core/src/serve.rs:145`.
+  /// `crates/nlipsy-core/src/serve.rs::Owed`.
   ///
   /// Three cases and not "a request or nothing", because the token ceiling is a third
   /// kind of answer: a refusal that deliberately echoes nothing. `engine.owed-by` is
@@ -626,7 +630,7 @@ interface types {
     control-only,
   }
 
-  /// One exchange, answered — `crates/nlipsy-core/src/serve.rs:113`.
+  /// One exchange, answered — `crates/nlipsy-core/src/serve.rs::Served`.
   record served {
     /// What goes back to the peer. A message on every outcome, refusals included.
     reply: message,
@@ -657,20 +661,21 @@ interface types {
     findings: list<finding>,
   }
 
-  /// What an ECMA-431 binding knows about one exchange — the `Http` case of
-  /// `ExchangeDetail` (`crates/nlipsy-core/src/transport.rs:89`).
+  /// What an ECMA-431 binding knows about one exchange —
+  /// `crates/nlipsy-core/src/transport.rs::ExchangeDetail::Http`.
   record http-detail {
     /// The response status, as a number.
     status: u16,
-    /// `Retry-After`, parsed into milliseconds — `parse_retry_after`
-    /// (`crates/nlipsy-http/src/retry.rs:49`). `some(0)` and `none` are different
-    /// answers: `none` means the end-point said nothing usable, and a caller that reads
-    /// it as zero will retry immediately against an end-point that never asked it to.
+    /// `Retry-After`, parsed into milliseconds —
+    /// `crates/nlipsy-http/src/retry.rs::parse_retry_after`. `some(0)` and `none` are
+    /// different answers: `none` means the end-point said nothing usable, and a caller
+    /// that reads it as zero will retry immediately against an end-point that never asked
+    /// it to.
     retry-after-ms: option<u64>,
   }
 
   /// What the binding knows about one exchange —
-  /// `crates/nlipsy-core/src/transport.rs:89`.
+  /// `crates/nlipsy-core/src/transport.rs::ExchangeDetail`.
   ///
   /// One case today, on purpose: a WebSocket frame (ECMA-432) has neither a status nor
   /// a `Retry-After`, and AMQP (ECMA-433) has neither, so each adds its own case when
@@ -680,7 +685,7 @@ interface types {
     http(http-detail),
   }
 
-  /// What a transport carried back — `crates/nlipsy-core/src/transport.rs:55`.
+  /// What a transport carried back — `crates/nlipsy-core/src/transport.rs::Exchange`.
   record exchange {
     /// The response body, as bytes.
     body: list<u8>,
@@ -689,8 +694,7 @@ interface types {
   }
 
   /// Where a request was going and what the binding said about it — the payload the
-  /// two reaching cases of `TransportError` carry
-  /// (`crates/nlipsy-core/src/transport.rs:130`).
+  /// two reaching cases of `crates/nlipsy-core/src/transport.rs::TransportError` carry.
   record transport-failure {
     /// The end-point the request was going to. What a retry decision and a log line
     /// name.
@@ -700,7 +704,7 @@ interface types {
   }
 
   /// Why an exchange did not produce a reply —
-  /// `crates/nlipsy-core/src/transport.rs:130`.
+  /// `crates/nlipsy-core/src/transport.rs::TransportError`.
   ///
   /// The three differ in what a caller may safely do next, which is the whole reason
   /// they are three.
@@ -717,21 +721,21 @@ interface types {
     malformed(string),
   }
 
-  /// A reply body that is not an NLIP message — the `Opaque` case of `Body`
-  /// (`crates/nlipsy-core/src/transport.rs:240`).
+  /// A reply body that is not an NLIP message —
+  /// `crates/nlipsy-core/src/transport.rs::Body::Opaque`.
   ///
   /// Kept rather than turned into an error, because an NLIP client has to *render* it:
   /// over HTTP these bytes usually came from something in front of the end-point — a
   /// proxy's HTML, a framework's plain text — and the user still has to see them.
   record opaque {
     /// The body, rendered for a reader and cut to 512 characters —
-    /// `OPAQUE_PREVIEW` (`crates/nlipsy-core/src/transport.rs:45`).
+    /// `crates/nlipsy-core/src/transport.rs::OPAQUE_PREVIEW`.
     text: string,
     /// Why it could not be read as a message.
     why: string,
   }
 
-  /// What the end-point sent back — `crates/nlipsy-core/src/transport.rs:240`.
+  /// What the end-point sent back — `crates/nlipsy-core/src/transport.rs::Body`.
   variant body {
     /// Bytes that decode as an NLIP message.
     message(message),
@@ -740,28 +744,28 @@ interface types {
   }
 
   /// One reply, as the rest of a client consumes it —
-  /// `crates/nlipsy-core/src/transport.rs:272`.
+  /// `crates/nlipsy-core/src/transport.rs::Reply`.
   ///
   /// The derived views below are fields computed in Rust rather than methods,
   /// so that the wrapper has no rule to port.
   record reply {
     /// What the binding knows about the exchange. `status` and the delay are read out
     /// of this; a status in 200..300 is what "the end-point answered" means
-    /// (`ExchangeDetail::is_ok`, `crates/nlipsy-core/src/transport.rs:103`).
+    /// (`crates/nlipsy-core/src/transport.rs::ExchangeDetail::is_ok`).
     detail: exchange-detail,
     /// How many bytes the body was, before anything was made of it. Not the decoded
     /// length, which is measured after whitespace and escapes have been resolved.
     bytes: u32,
     /// The body, decoded if it could be.
     body: body,
-    /// The text to show the user, whoever wrote it — `Reply::text`
-    /// (`crates/nlipsy-core/src/transport.rs:328`). Every `text` submessage in
+    /// The text to show the user, whoever wrote it —
+    /// `crates/nlipsy-core/src/transport.rs::Reply::text`. Every `text` submessage in
     /// document order, joined by spaces; for an opaque body, the preview. The language
     /// filter is deliberately not applied: an end-point that answers in another
     /// language is answering, not failing.
     text: option<string>,
-    /// Every `token` submessage the reply carries, as it arrived — `Reply::tokens`
-    /// (`crates/nlipsy-core/src/transport.rs:363`).
+    /// Every `token` submessage the reply carries, as it arrived —
+    /// `crates/nlipsy-core/src/transport.rs::Reply::tokens`.
     ///
     /// §6.2 ¶2 obliges an end-point that receives a token submessage to include "the
     /// same submessage with the exact same format, subformat and content" in its
@@ -784,7 +788,7 @@ interface types {
     /// message that *is* one (`conformance/cases/readings/36`).
     tokens: list<submessage>,
     /// The content of every conversation token the reply carries, in order —
-    /// `Reply::conversation_tokens` (`crates/nlipsy-core/src/transport.rs:386`),
+    /// `crates/nlipsy-core/src/transport.rs::Reply::conversation_tokens`,
     /// derived from `tokens` above.
     ///
     /// §6.2.1's identifier as a **key**: what a caller files a transcript under, shows
@@ -795,7 +799,7 @@ interface types {
     /// A token whose content is not a string has no entry here and is still in `tokens`.
     conversation-tokens: list<string>,
     /// The content of every authentication token the reply carries, in order —
-    /// `Reply::authentication_tokens` (`crates/nlipsy-core/src/transport.rs:399`),
+    /// `crates/nlipsy-core/src/transport.rs::Reply::authentication_tokens`,
     /// derived from `tokens` on the same terms as `conversation-tokens`.
     ///
     /// §6.2.2 is the mandatory half of clause 6 — the other end-point "is obligated to
@@ -805,7 +809,7 @@ interface types {
     /// that needs to notice a credential arriving or to tell two apart.
     authentication-tokens: list<string>,
     /// Whether the end-point marked the reply as an error in NLIP terms —
-    /// `Reply::is_error` (`crates/nlipsy-core/src/transport.rs:417`). A body that is
+    /// `crates/nlipsy-core/src/transport.rs::Reply::is_error`. A body that is
     /// not a message counts as one: a caller must not be left believing an end-point
     /// that never spoke NLIP said something in it.
     is-error: bool,
@@ -820,9 +824,9 @@ interface types {
 interface protocol {
   use types.{message, wire, violation, submessage, parse-error, token-kind};
 
-  /// Decode one document — `Message::from_json_bytes`
-  /// (`crates/nlipsy-protocol/src/message.rs:469`) or `Message::from_cbor_slice`
-  /// (`:589`), chosen by `wire`.
+  /// Decode one document —
+  /// `crates/nlipsy-protocol/src/message.rs::Message::from_json_bytes` or
+  /// `crates/nlipsy-protocol/src/message.rs::Message::from_cbor_slice`, chosen by `wire`.
   ///
   /// `wire` is a parameter and not a guess, so that ECMA-432 §7.2's text fallback stays
   /// the caller's decision, as it is in Rust.
@@ -832,8 +836,8 @@ interface protocol {
   /// `conformance/cases/` asserts — the kind, the path and the field.
   decode: func(bytes: list<u8>, wire: wire) -> result<message, parse-error>;
 
-  /// Encode one message — `Message::to_json_vec`
-  /// (`crates/nlipsy-protocol/src/message.rs:631`) or `Message::to_cbor_vec` (`:610`).
+  /// Encode one message — `crates/nlipsy-protocol/src/message.rs::Message::to_json_vec`
+  /// or `crates/nlipsy-protocol/src/message.rs::Message::to_cbor_vec`.
   ///
   /// No failure mode: a message's keys are strings and its numbers are finite, so
   /// there is nothing a serializer can refuse. On the JSON wire the bytes are the
@@ -841,26 +845,25 @@ interface protocol {
   /// structured content, padded base64, compact.
   encode: func(message: message, wire: wire) -> list<u8>;
 
-  /// Apply clause 5's semantic rules — `Message::validate`
-  /// (`crates/nlipsy-protocol/src/message.rs:640`).
+  /// Apply clause 5's semantic rules —
+  /// `crates/nlipsy-protocol/src/message.rs::Message::validate`.
   ///
   /// Findings, not failures: the message decoded. The corpus compares these as a set
   /// of `{rule, severity, path}`; the order is not part of any expectation.
   validate: func(message: message) -> list<violation>;
 
   /// `true` when `control` is `true` **or** `message-type` equals `control` ignoring
-  /// case — `Message::is_control` (`crates/nlipsy-protocol/src/message.rs:408`).
+  /// case — `crates/nlipsy-protocol/src/message.rs::Message::is_control`.
   ///
   /// ECMA-430 is inconsistent here: §5.1.1 reserves the *value* while §6.3 speaks of a
   /// boolean *field*, and TR/113's figures send the boolean. Both are read and OR-ed.
-  /// It is also the rule `Dispatcher::route` (`crates/nlipsy-core/src/dispatch.rs:54`)
-  /// applies; the dispatcher itself is not exported, because the host that wants a
-  /// control/data split reads this and routes in its own `answer`.
+  /// It is also the rule `crates/nlipsy-core/src/dispatch.rs::Dispatcher::route` applies;
+  /// the dispatcher itself is not exported, because the host that wants a control/data
+  /// split reads this and routes in its own `answer`.
   is-control: func(message: message) -> bool;
 
   /// All `text` content of the message in `language`, joined by single spaces in
-  /// document order — `Message::extract_text`
-  /// (`crates/nlipsy-protocol/src/message.rs:655`).
+  /// document order — `crates/nlipsy-protocol/src/message.rs::Message::extract_text`.
   ///
   /// The first submessage first when its format is `text`, then the `submessages`
   /// array in the order it arrived, which §5.1.5 makes significant. `none` for
@@ -870,8 +873,7 @@ interface protocol {
   extract-text: func(message: message, language: option<string>) -> option<string>;
 
   /// The message's *first* submessage as a `submessage`, when that submessage is a
-  /// token — `first_submessage_token`
-  /// (`crates/nlipsy-core/src/first_submessage.rs:28`).
+  /// token — `crates/nlipsy-core/src/first_submessage.rs::first_submessage_token`.
   ///
   /// §5 ¶2 calls the leading object "the first submessage", so a message that *is* a
   /// token carries one for §6.2's purposes. `message.submessages` cannot show it, which
@@ -880,15 +882,15 @@ interface protocol {
   first-submessage-token: func(message: message) -> option<submessage>;
 
   /// How many `token` submessages a request carries, the first submessage included —
-  /// `token_count` (`crates/nlipsy-core/src/conformity.rs:51`).
+  /// `crates/nlipsy-core/src/conformity.rs::token_count`.
   ///
   /// Counted rather than collected: it runs before the ceiling is applied, so a message
   /// with a hundred thousand tokens must not cost a hundred thousand copies to refuse.
   token-count: func(message: message) -> u32;
 
   /// Which reserved kind a token submessage is, or `none` for the application's own —
-  /// `Submessage::is_conversation_token` / `is_authentication_token`
-  /// (`crates/nlipsy-protocol/src/message.rs:209` and `:204`).
+  /// `crates/nlipsy-protocol/src/message.rs::Submessage::is_conversation_token` and
+  /// `crates/nlipsy-protocol/src/message.rs::Submessage::is_authentication_token`.
   ///
   /// The subformat's *prefix*, matched case-insensitively: §5.3 reserves exactly two
   /// and §6.2 says of every other that "the use of these tokens is up to the
@@ -902,11 +904,11 @@ interface protocol {
   token-kind-of: func(submessage: submessage) -> option<token-kind>;
 
   /// The §6.4 out-of-band *request*: a `control` message asking for an upload target —
-  /// `Message::upload_request` (`crates/nlipsy-protocol/src/message.rs:368`).
+  /// `crates/nlipsy-protocol/src/message.rs::Message::upload_request`.
   upload-request: func(ask: string) -> message;
 
-  /// The §6.4 out-of-band *response* — `Message::upload_response`
-  /// (`crates/nlipsy-protocol/src/message.rs:384`).
+  /// The §6.4 out-of-band *response* —
+  /// `crates/nlipsy-protocol/src/message.rs::Message::upload_response`.
   ///
   /// The shape is easy to build wrongly and is named once here rather than assembled at
   /// every call site: a `control` message **containing a submessage** whose format is
@@ -916,12 +918,12 @@ interface protocol {
 }
 
 /// The deployment's handler, and the four values it configures the engine with —
-/// `Endpoint` (`crates/nlipsy-core/src/endpoint.rs:35`).
+/// `crates/nlipsy-core/src/endpoint.rs::Endpoint`.
 ///
 /// One of five imported interfaces, all of plain functions and none of them holding a
 /// resource. There is one end-point per component instance: a deployment that answers
 /// two kinds of request routes inside `answer`, which is what
-/// `Dispatcher::route` (`crates/nlipsy-core/src/dispatch.rs:54`) does in Rust and what
+/// `crates/nlipsy-core/src/dispatch.rs::Dispatcher::route` does in Rust and what
 /// `protocol.is-control` is exported for.
 ///
 /// The four configuration functions are read once per exported call rather than held,
@@ -936,28 +938,26 @@ interface protocol {
 interface host-endpoint {
   use types.{config, context, endpoint-error, http-options, message, rejection};
 
-  /// A name for logs and for a dispatcher — `Endpoint::name`
-  /// (`crates/nlipsy-core/src/endpoint.rs:35`). Not a protocol value.
+  /// A name for logs and for a dispatcher —
+  /// `crates/nlipsy-core/src/endpoint.rs::Endpoint::name`. Not a protocol value.
   name: func() -> string;
 
-  /// The optional halves of clause 6 this end-point turns on — `ConformityConfig`
-  /// (`crates/nlipsy-core/src/conformity.rs:79`). `engine.default-config` is what a
-  /// host that has decided nothing returns.
+  /// The optional halves of clause 6 this end-point turns on —
+  /// `crates/nlipsy-core/src/conformity.rs::ConformityConfig`. `engine.default-config` is
+  /// what a host that has decided nothing returns.
   conformity: func() -> config;
 
-  /// What a clause-5 finding does, inbound and outbound — `Rejection`
-  /// (`crates/nlipsy-core/src/conformity.rs:224`). `engine.default-rejection` is the
+  /// What a clause-5 finding does, inbound and outbound —
+  /// `crates/nlipsy-core/src/conformity.rs::Rejection`. `engine.default-rejection` is the
   /// answer for a host that has decided nothing.
   rejection-policy: func() -> rejection;
 
-  /// What the ECMA-431 §6 binding does — `ServerConfig`
-  /// (`crates/nlipsy-server/src/server.rs:122`). Read once per HTTP request by
-  /// `wasi:http/handler`; `engine.default-http-options` is the reference server's
-  /// answer.
+  /// What the ECMA-431 §6 binding does —
+  /// `crates/nlipsy-server/src/server.rs::ServerConfig`. Read once per HTTP request by
+  /// `wasi:http/handler`; `engine.default-http-options` is the reference server's answer.
   http-binding: func() -> http-options;
 
-  /// The user's handler — `Endpoint::handle`
-  /// (`crates/nlipsy-core/src/endpoint.rs:52`).
+  /// The user's handler — `crates/nlipsy-core/src/endpoint.rs::Endpoint::handle`.
   ///
   /// It returns a **message**, never a `finished`: finishing is the guest's, it happens
   /// at the bottom of the composed layer stack because §6.2.1's token is minted there,
@@ -972,9 +972,10 @@ interface host-endpoint {
   answer: async func(request: message, cx: context) -> result<message, endpoint-error>;
 }
 
-/// The deployment's message-level layers — `Middleware` and `Next`
-/// (`crates/nlipsy-core/src/middleware.rs:90`, `:139`), split in two so that the seam
-/// can cross a boundary.
+/// The deployment's message-level layers —
+/// `crates/nlipsy-core/src/middleware.rs::Middleware` and
+/// `crates/nlipsy-core/src/middleware.rs::Next`, split in two so that the seam can cross
+/// a boundary.
 ///
 /// A Rust layer is one "around" call: it is handed `next` and decides whether to run
 /// it. `next` cannot cross — it is a type an export would have to define appearing in
@@ -997,7 +998,7 @@ interface host-layers {
   /// The way in. `pass` hands the request down, `answer` short-circuits: the handler
   /// and every layer below are not run, this layer's own `after` is not called, and
   /// the guest still runs clause 6's idempotent half over the reply —
-  /// `Conformity::close` (`crates/nlipsy-core/src/conformity.rs:514`), which `serve`
+  /// `crates/nlipsy-core/src/conformity.rs::Conformity::close`, which `serve`
   /// applies unconditionally.
   ///
   /// An `endpoint-error` refuses the exchange, exactly as a Rust layer that returns one
@@ -1012,8 +1013,7 @@ interface host-layers {
 
   /// The way out, innermost first — and **after** `finish`, so a layer that persists
   /// what §6.2.1 minted sees the reply that goes on the wire. That is the whole reason
-  /// `Tail` puts `finish` at the bottom of the stack
-  /// (`crates/nlipsy-core/src/serve.rs:458`).
+  /// `crates/nlipsy-core/src/serve.rs::Tail` puts `finish` at the bottom of the stack.
   ///
   /// Only reached when this layer's `before` answered `pass` *and* the stack below it
   /// succeeded: a failure goes straight back to the binding, as `?` does in Rust.
@@ -1021,7 +1021,7 @@ interface host-layers {
 }
 
 /// Who created a token, and what this end-point's own tokens are —
-/// `TokenAuthority` (`crates/nlipsy-core/src/token.rs:94`).
+/// `crates/nlipsy-core/src/token.rs::TokenAuthority`.
 ///
 /// **All three must be cheap and non-blocking**, and they are synchronous here for that
 /// reason: they run inside the request, on the path between the handler and the wire.
@@ -1032,8 +1032,7 @@ interface host-authority {
   use types.{context, token-kind};
 
   /// `true` when this end-point created `token`, and may therefore decline to echo
-  /// it — §6.2's exception, `TokenAuthority::is_own`
-  /// (`crates/nlipsy-core/src/token.rs:111`).
+  /// it — §6.2's exception, `crates/nlipsy-core/src/token.rs::TokenAuthority::is_own`.
   ///
   /// Usually a disjunction: the session remembers what it minted *while it is still
   /// here*, and a signature is recognisable whether or not the conversation behind it
@@ -1045,8 +1044,8 @@ interface host-authority {
   is-own: func(token: string, cx: context) -> bool;
 
   /// The token of `kind` this end-point has **already** issued for this conversation —
-  /// a read with no side effect, `TokenAuthority::issued`
-  /// (`crates/nlipsy-core/src/token.rs:126`).
+  /// a read with no side effect,
+  /// `crates/nlipsy-core/src/token.rs::TokenAuthority::issued`.
   ///
   /// Consulted on *every* reply, refusals included, whatever else the request
   /// carried: §6.2.1 obliges the end-point that created a conversation token to keep
@@ -1055,7 +1054,7 @@ interface host-authority {
   issued: func(kind: token-kind, cx: context) -> option<string>;
 
   /// Create a **new** token of `kind` and remember it — §6.2.1, §6.2.2,
-  /// `TokenAuthority::mint` (`crates/nlipsy-core/src/token.rs:140`).
+  /// `crates/nlipsy-core/src/token.rs::TokenAuthority::mint`.
   ///
   /// Called only when `issued` returned `none` *and* the request brought no token of
   /// that kind this end-point did not create, so an implementation need not check
@@ -1070,8 +1069,8 @@ interface host-authority {
   mint: func(kind: token-kind, cx: context) -> option<string>;
 }
 
-/// An alternative to `wasi:http/client` for the client half — `Transport`
-/// (`crates/nlipsy-core/src/transport.rs:172`).
+/// An alternative to `wasi:http/client` for the client half —
+/// `crates/nlipsy-core/src/transport.rs::Transport`.
 ///
 /// For a host whose outgoing HTTP the runtime does not provide — a browser without a
 /// shim for `wasi:http/client`, say — and for a test. A host that never calls
@@ -1091,19 +1090,18 @@ interface host-transport {
   send: async func(request: list<u8>, cx: context) -> result<exchange, transport-error>;
 }
 
-/// Where a recording client puts what it saw — `RecordSink`
-/// (`crates/nlipsy-core/src/record.rs:287`).
+/// Where a recording client puts what it saw —
+/// `crates/nlipsy-core/src/record.rs::RecordSink`.
 interface host-record-sink {
   /// Append one exchange, already rendered as one JSON line.
   ///
   /// The line rather than the record, so that a sink needs no JSON codec of its own:
-  /// the spelling is `Recorded::to_json_line`
-  /// (`crates/nlipsy-core/src/record.rs:109`) unchanged, which is what lets a fixture
-  /// recorded from JavaScript load in Rust and the other way round. A failure is
-  /// reported and never swallowed — a recording that quietly stopped growing would
-  /// produce a fixture that passes for the wrong reason, and `client.call-recording`
-  /// turns a failure here into `transport-error.malformed`, exactly as `Recorder` does
-  /// (`crates/nlipsy-core/src/record.rs:294`).
+  /// the spelling is `crates/nlipsy-core/src/record.rs::Recorded::to_json_line`
+  /// unchanged, which is what lets a fixture recorded from JavaScript load in Rust and
+  /// the other way round. A failure is reported and never swallowed — a recording that
+  /// quietly stopped growing would produce a fixture that passes for the wrong reason,
+  /// and `client.call-recording` turns a failure here into `transport-error.malformed`,
+  /// exactly as `crates/nlipsy-core/src/record.rs::Recorder` does.
   ///
   /// `async`, because writing is I/O and it is the user's. The seed's `record` is
   /// synchronous and is called from inside a transport, so the guest buffers the line
@@ -1115,32 +1113,32 @@ interface host-record-sink {
 /// ECMA-430 clause 6, and the composed order around it — free functions.
 ///
 /// Nothing here is a resource and nothing here holds state between calls. The
-/// `Conformity` (`crates/nlipsy-core/src/conformity.rs:387`) every function below runs
-/// under is built *per call* from `host-endpoint.conformity`,
-/// `host-endpoint.rejection-policy` and the `host-authority` import, which is the safe
-/// shape: `serve_answered`
-/// (`crates/nlipsy-core/src/serve.rs:325`) takes a `&Conformity` and asks for no
-/// `'static`, so nothing in the guest outlives an exported call.
+/// `crates/nlipsy-core/src/conformity.rs::Conformity` every function below runs under is
+/// built *per call* from `host-endpoint.conformity`, `host-endpoint.rejection-policy` and
+/// the `host-authority` import, which is the safe shape:
+/// `crates/nlipsy-core/src/serve.rs::serve_answered` takes a `&Conformity` and asks for
+/// no `'static`, so nothing in the guest outlives an exported call.
 interface engine {
   use types.{config, context, finding, finished, http-options, message, outcome, owed,
              rejected, rejection, served, wire};
 
-  /// Issue nothing, and refuse above 32 tokens — `impl Default for ConformityConfig`
-  /// (`crates/nlipsy-core/src/conformity.rs:92`); the ceiling is
-  /// `DEFAULT_MAX_TOKENS_PER_MESSAGE` (`:70`).
+  /// Issue nothing, and refuse above 32 tokens —
+  /// `crates/nlipsy-core/src/conformity.rs::ConformityConfig::default`; the ceiling is
+  /// `crates/nlipsy-core/src/conformity.rs::DEFAULT_MAX_TOKENS_PER_MESSAGE`.
   ///
   /// Exported because the corpus's `endpoint.config` block states only what a case is
   /// about and everything else is this default, so a runner that re-typed the numbers
   /// would be testing its own copy of them.
   default-config: func() -> config;
 
-  /// Reject an error, log a warning, in both directions — `impl Default for Policy`
-  /// (`crates/nlipsy-core/src/conformity.rs:177`), which `Rejection` derives (`:224`).
+  /// Reject an error, log a warning, in both directions —
+  /// `crates/nlipsy-core/src/conformity.rs::Policy::default`, which
+  /// `crates/nlipsy-core/src/conformity.rs::Rejection` derives.
   default-rejection: func() -> rejection;
 
-  /// The reference server's binding, option for option — `impl Default for ServerConfig`
-  /// (`crates/nlipsy-server/src/server.rs:155`) and `impl Default for StatusMap`
-  /// (`crates/nlipsy-http/src/status.rs:105`).
+  /// The reference server's binding, option for option —
+  /// `crates/nlipsy-server/src/server.rs::ServerConfig::default` and
+  /// `crates/nlipsy-http/src/status.rs::StatusMap::default`.
   ///
   /// Exported as `default-config` is, with more force: nine status codes, a body limit
   /// and a header name are the largest block of values a host would otherwise re-type,
@@ -1155,8 +1153,8 @@ interface engine {
   /// `examples/echo-endpoint/src/host.rs` is what that looks like, with the reason on it.
   default-http-options: func() -> http-options;
 
-  /// What clause 6 still owes the peer for this outcome — `owed`
-  /// (`crates/nlipsy-core/src/serve.rs:168`).
+  /// What clause 6 still owes the peer for this outcome —
+  /// `crates/nlipsy-core/src/serve.rs::owed`.
   ///
   /// A rule over a value, with no end-point, no context and no executor in it, which is
   /// what lets a binding in another language apply the same rule to the same variant. A
@@ -1168,8 +1166,8 @@ interface engine {
   owed-by: func(outcome: outcome) -> owed;
 
   /// The text the peer may be shown, or `none` when there is nothing to explain —
-  /// `Outcome::public_message` (`crates/nlipsy-core/src/serve.rs:84`); the failure half
-  /// is `EndpointError::public_message` (`crates/nlipsy-core/src/endpoint.rs:201`).
+  /// `crates/nlipsy-core/src/serve.rs::Outcome::public_message`; the failure half is
+  /// `crates/nlipsy-core/src/endpoint.rs::EndpointError::public_message`.
   ///
   /// `none` for `ok` alone: the reply *is* the answer there. Exported so that a host
   /// building its own error body does not restate the rule — and the rule includes
@@ -1178,8 +1176,8 @@ interface engine {
   public-message: func(outcome: outcome) -> option<string>;
 
   /// The delay a failing outcome asked a peer to wait, in milliseconds —
-  /// `Outcome::retry_after` (`crates/nlipsy-core/src/serve.rs:99`); the failure half is
-  /// `EndpointError::retry_after` (`crates/nlipsy-core/src/endpoint.rs:222`).
+  /// `crates/nlipsy-core/src/serve.rs::Outcome::retry_after`; the failure half is
+  /// `crates/nlipsy-core/src/endpoint.rs::EndpointError::retry_after`.
   ///
   /// `none` unless the outcome is a failure that named one, which today is
   /// `endpoint-error.unavailable`. The guest's own `wasi:http/handler` asks this before
@@ -1187,8 +1185,8 @@ interface engine {
   /// binding does not hold a second copy of a rule that moves.
   retry-after-of: func(outcome: outcome) -> option<u64>;
 
-  /// The reply a refusal or a failure goes back as — `error_reply`
-  /// (`crates/nlipsy-core/src/serve.rs:206`).
+  /// The reply a refusal or a failure goes back as —
+  /// `crates/nlipsy-core/src/serve.rs::error_reply`.
   ///
   /// An NLIP `MessageType: Error` message carrying `why`, with what `owed-by` says
   /// clause 6 still owes applied to it. Exported because a host produces refusals
@@ -1206,8 +1204,8 @@ interface engine {
   error-reply: func(request: option<message>, why: string, owed: owed,
                     cx: context) -> message;
 
-  /// Clause 6's first step, on its own — `Conformity::check`
-  /// (`crates/nlipsy-core/src/conformity.rs:441`).
+  /// Clause 6's first step, on its own —
+  /// `crates/nlipsy-core/src/conformity.rs::Conformity::check`.
   ///
   /// Clause 5 under `rejection.inbound` first, then §6.2's token ceiling — in that
   /// order, because a message that cannot be interpreted has no meaningful token count
@@ -1223,8 +1221,8 @@ interface engine {
   /// one this engine runs.
   check: func(request: message, cx: context) -> result<list<finding>, rejected>;
 
-  /// Clause 6's second step, on its own — `Conformity::finish`
-  /// (`crates/nlipsy-core/src/conformity.rs:481`).
+  /// Clause 6's second step, on its own —
+  /// `crates/nlipsy-core/src/conformity.rs::Conformity::finish`.
   ///
   /// Five steps, in this order and for this reason: the reply is sanitised against
   /// clause 5 *before* anything is added to it, so a replacement error message carries
@@ -1236,7 +1234,7 @@ interface engine {
   /// with `check`'s caution.
   finish: func(request: message, reply: message, cx: context) -> finished;
 
-  /// The composed order, over bytes — `serve` (`crates/nlipsy-core/src/serve.rs:263`).
+  /// The composed order, over bytes — `crates/nlipsy-core/src/serve.rs::serve`.
   ///
   /// Decode on `wire`, `check` outside the stack, the host's layers outermost first,
   /// `answer` at the bottom with `finish` under it, the layers back innermost first,
@@ -1252,8 +1250,8 @@ interface engine {
   /// for the call; see `types.context`.
   serve: async func(request: list<u8>, wire: wire, cx: context) -> served;
 
-  /// The same order over a message already decoded — `serve_message`
-  /// (`crates/nlipsy-core/src/serve.rs:392`).
+  /// The same order over a message already decoded —
+  /// `crates/nlipsy-core/src/serve.rs::serve_message`.
   ///
   /// For a binding whose frame carried a message, and for a caller that wants the
   /// request for its own log line or audit trail, which it cannot have if the engine
@@ -1261,31 +1259,32 @@ interface engine {
   serve-message: async func(request: message, cx: context) -> served;
 }
 
-/// An agent calling an end-point — free functions over `Client`
-/// (`crates/nlipsy-core/src/transport.rs:525`).
+/// An agent calling an end-point — free functions over
+/// `crates/nlipsy-core/src/transport.rs::Client`.
 ///
 /// The guest holds no client state: the URL, the wire and the recording are the host's
 /// to keep and to pass, which is what makes every function here a free one. One `await`
-/// each: encode (`encode_request`, `crates/nlipsy-core/src/transport.rs:442`), carry,
-/// decode (`decode_reply`, `:466`) — and everything else, which end-point, how long to
-/// wait, whether to ask again, is the caller's, because a terminal client and a server
-/// fanning out to five peers want opposite things from the same exchange.
+/// each: encode (`crates/nlipsy-core/src/transport.rs::encode_request`), carry, decode
+/// (`crates/nlipsy-core/src/transport.rs::decode_reply`) — and everything else, which
+/// end-point, how long to wait, whether to ask again, is the caller's, because a terminal
+/// client and a server fanning out to five peers want opposite things from the same
+/// exchange.
 interface client {
   use types.{context, message, reply, transport-error, wire};
 
-  /// One exchange over `wasi:http/client@0.3.0` — `Client::send`
-  /// (`crates/nlipsy-core/src/transport.rs:576`) with the ECMA-431 §6 request this
-  /// binding writes.
+  /// One exchange over `wasi:http/client@0.3.0` —
+  /// `crates/nlipsy-core/src/transport.rs::Client::send` with the ECMA-431 §6 request
+  /// this binding writes.
   ///
-  /// `POST url` with `CONTENT_TYPE`, which is `application/json`
-  /// (`crates/nlipsy-http/src/binding.rs:57`), and the correlator from `cx.correlator`
-  /// in `CORRELATOR_HEADER`, which is `x-nlip-correlator` (`:37`), when there is one.
-  /// `url` is the whole URL a deployment published, not a host and a port with
-  /// `NLIP_PATH` (`crates/nlipsy-http/src/binding.rs:21`) appended: an end-point may
-  /// sit behind a prefix a caller cannot derive.
+  /// `POST url` with `crates/nlipsy-http/src/binding.rs::CONTENT_TYPE`, which is
+  /// `application/json`, and the correlator from `cx.correlator` in
+  /// `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER`, which is
+  /// `x-nlip-correlator`, when there is one. `url` is the whole URL a deployment
+  /// published, not a host and a port with `crates/nlipsy-http/src/binding.rs::NLIP_PATH`
+  /// appended: an end-point may sit behind a prefix a caller cannot derive.
   ///
   /// The reply's `detail` is `http` with the status and `Retry-After` read through
-  /// `parse_retry_after` (`crates/nlipsy-http/src/retry.rs:49`).
+  /// `crates/nlipsy-http/src/retry.rs::parse_retry_after`.
   call: async func(url: string, request: message, wire: wire, cx: context) -> result<reply, transport-error>;
 
   /// The same exchange over the host's `host-transport` import instead — for a host
@@ -1296,8 +1295,8 @@ interface client {
   call-through: async func(request: message, wire: wire, cx: context) -> result<reply, transport-error>;
 
   /// `call`, with the exchange written to `host-record-sink` in the recorded-wire
-  /// spelling — `Recorder` (`crates/nlipsy-core/src/record.rs:294`) and
-  /// `Recorded::to_json_line` (`:109`).
+  /// spelling — `crates/nlipsy-core/src/record.rs::Recorder` and
+  /// `crates/nlipsy-core/src/record.rs::Recorded::to_json_line`.
   ///
   /// The fixture it writes is the one `replay` reads, and the one a Rust test loads:
   /// the request as it went out, the status, and the reply body. A failure to write is
@@ -1305,20 +1304,20 @@ interface client {
   /// would produce a fixture that passes for the wrong reason.
   call-recording: async func(url: string, request: message, wire: wire, cx: context) -> result<reply, transport-error>;
 
-  /// The reply a recording gives to `request` — `Replay`
-  /// (`crates/nlipsy-core/src/record.rs:342`), built from JSON-lines text
-  /// (`Replay::from_jsonl`, `:362`).
+  /// The reply a recording gives to `request` —
+  /// `crates/nlipsy-core/src/record.rs::Replay`, built from JSON-lines text by
+  /// `crates/nlipsy-core/src/record.rs::Replay::from_jsonl`.
   ///
   /// `index` is the cursor, and it is the **host's**: the guest keeps no state, so a
   /// caller replaying a transcript passes `0`, then `1`, and so on. The match is on the
   /// *decoded* request and not on the bytes, because two encoders can spell one message
   /// differently — CBOR especially — and a recording is evidence about the message
-  /// (`Replay::on_wire`, `:380`). A request the recorded exchange at `index` is not for
-  /// is refused rather than answered from the next one.
+  /// (`crates/nlipsy-core/src/record.rs::Replay::on_wire`). A request the recorded
+  /// exchange at `index` is not for is refused rather than answered from the next one.
   ///
   /// Synchronous: a recording needs no executor, which is half of why recordings are
   /// worth keeping. The error is prose naming the recording and the line — the
-  /// `Display` of `ReplayError` (`crates/nlipsy-core/src/record.rs:222`) or of the
+  /// `Display` of `crates/nlipsy-core/src/record.rs::ReplayError` or of the
   /// `TransportError` the replay refused with.
   replay: func(recording: string, index: u32, request: message, wire: wire) -> result<reply, string>;
 }
@@ -1349,10 +1348,9 @@ world nlipsy {
   /// The outgoing half of ECMA-431 §6, for `client.call`.
   import wasi:http/client@0.3.0;
   /// The randomness `wasi:http/handler` mints a correlator from when the peer brought
-  /// none — `ServerConfig::correlator_for`
-  /// (`crates/nlipsy-server/src/server.rs:156`) uses a UUID v4 and this is where the
-  /// bytes for one come from. `std` does not link it on `wasm32-wasip3`, so the world
-  /// asks for it by name.
+  /// none — `crates/nlipsy-server/src/server.rs::ServerConfig::correlator_for` uses a
+  /// UUID v4 and this is where the bytes for one come from. `std` does not link it on
+  /// `wasm32-wasip3`, so the world asks for it by name.
   import wasi:random/random@0.3.0;
   /// ECMA-430 clause 5, as pure functions.
   export protocol;

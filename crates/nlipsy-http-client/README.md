@@ -200,12 +200,12 @@ date.
 
 ## What this crate no longer witnesses
 
-The crate this one grew out of — `nlip-transport`, in the reference server's repository
-— declared `NLIP_PATH` and `CORRELATOR_HEADER` itself, and said why: "Declared here
-rather than imported from the server: the two are separate implementations of the same
-clause, and a two-token constant that both sides must agree on fails loudly when it
-drifts, not silently" (`crates/transport/src/nlip.rs:31–44`). Client and server were two
-codebases, and agreement between them was evidence.
+The crate this one grew out of lived in the reference server's repository and declared
+`NLIP_PATH` and `CORRELATOR_HEADER` itself, and said why: "Declared here rather than
+imported from the server: the two are separate implementations of the same clause, and
+a two-token constant that both sides must agree on fails loudly when it drifts, not
+silently". Client and server were two codebases, and agreement between them was
+evidence.
 
 Merging both sides into one workspace removed that witness, and the constants have since
 become one line of code: `NLIP_PATH`, `CORRELATOR_HEADER` and `CONVERSATION_SUBFORMAT`

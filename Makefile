@@ -3,19 +3,21 @@
 #   make check    # check-features, then fmt + clippy + tests
 #
 # The same three commands a consumer runs over its own workspace, and `--workspace` is
-# not optional here. This repository root is a virtual manifest with no
-# package of its own, so `--workspace` is what reaches the members at all — and there
-# are already seven: nlipsy-protocol is the message model, nlipsy-core is ECMA-430
+# not optional here. This repository root is a virtual manifest with no package of its
+# own, and a bare `cargo test` stops at the root manifest's `default-members` — the
+# native crates and the corpus runner — so `--workspace` is what reaches every member,
+# and there are nine: nlipsy-protocol is the message model, nlipsy-core is ECMA-430
 # clause 6 plus the handler, layer and transport seams and the `serve` composer over
 # them, nlipsy-http is ECMA-431 §6 as values shared by both ends of the binding,
 # nlipsy-http-client is the ECMA-431 client binding over reqwest or over hyper (two
 # transports, two features — `make check-mobile-graph` is why), nlipsy-server is the
 # ECMA-431 server binding over axum, nlipsy is the facade that re-exports them behind
 # feature flags (all six published), nlipsy-conformance (`crates/conformance`, never
-# published) is what runs the corpus under `conformance/` against the model, and
+# published) is what runs the corpus under `conformance/` against the model,
 # nlipsy-component (never published) is the `wit-bindgen` guest of `wit/nlipsy.wit` — the
 # same engine as a WebAssembly component, checked here on the host through its `rlib` and
-# built for `wasm32-wasip3` by `make check-component`. Spelling `--workspace` out
+# built for `wasm32-wasip3` by `make check-component`, and examples/echo-endpoint (never
+# published) is the end-point component it is composed with. Spelling `--workspace` out
 # also means the next member added — the ECMA-432 WebSocket binding, say — is checked
 # from the day it appears rather than the day someone notices.
 #
@@ -281,10 +283,11 @@ check-wasm:
 check-wit:
 	wasm-tools component wit wit/ > /dev/null
 # And the seed rule, which `wit/README.md` §1 states and nothing used to enforce: every
-# `path:line` in the contract and in §3's table must still name the item it cites. A
-# citation drifts the moment the file above it grows, and a rule that can be wrong
-# without anything noticing is a convention. Node and no dependency, so it belongs
-# beside the line above rather than in a target of its own.
+# citation in the contract and in that README — a path, `::`, an item — must name an
+# item the file defines (`wit/README.md` §2 has the exact rule). An item rather than a
+# line, because a line number drifts the moment the file above it grows, and a rule that
+# can be wrong without anything noticing is a convention. Node and no dependency, so it
+# belongs beside the line above rather than in a target of its own.
 	node wit/check-seeds.mjs
 
 # The component, and the corpus through it.

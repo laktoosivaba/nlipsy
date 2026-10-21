@@ -20,6 +20,14 @@
 # would fail for want of a file. Both are covered by the `component` job instead, which
 # builds the artefact first. Every exclusion below says which of the two reasons it is.
 #
+# That job is not in this file. This workflow is the one a release waits on — the six
+# published crates, the corpus runner and the checks around them — and the only one a
+# `v*` tag triggers. The WebAssembly component, its contract and the npm package are the
+# repository's experimental part, and `component.yml` proves them in a workflow of its
+# own: its `component` and `javascript` jobs need a nightly, Node, Bun, `wasm-tools` and
+# `wac`, and a failure there is a fact about the component or about jco rather than about
+# anything a crate ships. Its header says the rest.
+#
 # Actions are pinned to a major tag rather than a commit SHA: a workspace with no
 # secrets and nothing to exfiltrate does not buy enough from SHA pinning to pay for
 # the Dependabot churn it creates. `dtolnay/rust-toolchain` has no major tag at all —
@@ -68,7 +76,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # `nlipsy-conformance` is named separately with `--features cbor`, which is
       # `--all-features` minus `component`: that feature's lint pass needs a WebAssembly
-      # runtime and belongs to the `component` job.
+      # runtime and belongs to the `component` job in `component.yml`.
       - run: cargo clippy --workspace --all-targets --all-features --exclude nlipsy-conformance -- -D warnings
       - run: cargo clippy -p nlipsy-conformance --all-targets --features cbor -- -D warnings
 
@@ -87,7 +95,7 @@ jobs:
       # `--exclude nlipsy-conformance` and the line after it: `--all-features` would turn
       # on the `component` mode, whose test loads an artefact this job never built and
       # would therefore fail for want of a file rather than for want of conformance. The
-      # `component` job runs that mode, with the artefact.
+      # `component` job in `component.yml` runs that mode, with the artefact.
       - run: cargo test --workspace --all-features --exclude nlipsy-conformance
       - run: cargo test -p nlipsy-conformance --features cbor
       # And again with no features at all. `cbor` is optional, so the default build
@@ -234,105 +242,17 @@ jobs:
       # — so the promise is checked rather than skipped. It cannot reach `nlipsy::http`,
       # whose two features are the two bindings; the crate underneath that module is
       # covered by the line above.
-      # Two more exclusions than the two above, both of them targets rather than
-      # promises. `nlipsy-component` is a `cdylib` for `wasm32-wasip3`, where the
-      # component model and WASI exist; on `wasm32-unknown-unknown` it would be a bare
-      # core module with dangling imports, which says nothing about anything. And
+      # Three more exclusions than the two above, all of them targets rather than
+      # promises. `nlipsy-component` and `examples/echo-endpoint` are `cdylib`s for
+      # `wasm32-wasip3`, where the component model and WASI exist; on
+      # `wasm32-unknown-unknown` each would be a bare core module with dangling imports,
+      # which says nothing about anything — and `component.yml` builds both on the
+      # target they have. This is the line `make check-wasm` runs. And
       # `nlipsy-conformance` is named on its own line with `--features cbor`, because
       # `--all-features` would ask a WebAssembly runtime to compile *for* WebAssembly.
-      - run: cargo check --workspace --all-features --exclude nlipsy-http-client --exclude nlipsy-server --exclude nlipsy --exclude nlipsy-component --exclude nlipsy-conformance --target wasm32-unknown-unknown
+      - run: cargo check --workspace --all-features --exclude nlipsy-http-client --exclude nlipsy-server --exclude nlipsy --exclude nlipsy-component --exclude echo-endpoint --exclude nlipsy-conformance --target wasm32-unknown-unknown
       - run: cargo check -p nlipsy-conformance --features cbor --target wasm32-unknown-unknown
       - run: cargo check -p nlipsy --no-default-features --features client-core,server-core,cbor --target wasm32-unknown-unknown
-
-  component:
-    name: component
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Two toolchains, and the first one is the new part. The *artefact* is built for
-      # `wasm32-wasip3`, whose `rust-std` ships on nightly until Rust 1.100 makes the
-      # target stable (2026-11-12); the corpus host, clippy and the tests stay stable's.
-      # The nightly is pinned to the same date the `Makefile`'s `COMPONENT_TOOLCHAIN`
-      # defaults to, so the two cannot drift apart, and `make check-component` reaches it
-      # by name with `cargo +…`. On 2026-11-12 both become `stable` and this step goes.
-      #
-      # Nightly **first**: `dtolnay/rust-toolchain` makes the toolchain it installed the
-      # default, so the last one to run is what a bare `cargo` picks — and that has to be
-      # stable, since only one line of `check-component` wants the nightly.
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2026-09-15
-          targets: wasm32-wasip3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # `cargo install` rather than `bytecodealliance/actions/wasm-tools/setup@v1`: the
-      # action's input names are not something this workflow can cite from memory, and a
-      # `--locked` install of a tool that is already in this job's cargo cache is cheap.
-      # It is the same command `wit/README.md` §2 tells a contributor to run.
-      - run: cargo install wasm-tools --locked
-      # And the composer, for the same reason and by the same route: `check-component`
-      # now also builds `examples/echo-endpoint` and plugs it into the engine, so that
-      # the artefact a runtime serves on its own is built by the same target that
-      # checks the engine. `wac plug` is the one command it takes.
-      - run: cargo install wac-cli --locked
-      # The contract first: the file parses and the world resolves. It is cheap, it needs
-      # only the tool above, and a failure here explains every failure below it.
-      - run: make check-wit
-      # Then the guest: build on the pinned nightly, validate, read the world back —
-      # which is also what shows the imports are WASI 0.3 and nothing else — compose it
-      # with `examples/echo-endpoint`, and run the 125 cases of `conformance/` through
-      # the artefact in wasmtime, linked with `wasmtime_wasi::p3` and
-      # `wasmtime_wasi_http::p3`, beside the HTTP-level tests through
-      # `wasi:http/handler` and two requests through the composition. The proof of the
-      # component that needs no JavaScript at all.
-      - run: make check-component
-      # Informational only. The artefact has no size budget; the number is printed so
-      # that a jump in its size is noticed in a log rather than discovered by a
-      # consumer.
-      - name: artefact size
-        run: |
-          artefact=target/wasm32-wasip3/component/nlipsy_component.wasm
-          composed=target/wasm32-wasip3/component/nlipsy_echo.wasm
-          ls -l "$artefact" "$composed"
-          echo "raw bytes: $(wc -c < "$artefact")"
-          echo "composed raw bytes: $(wc -c < "$composed")"
-
-  javascript:
-    name: javascript
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # The same two toolchains as the `component` job, in the same order and for the
-      # same reason: the *artefact* is built for `wasm32-wasip3`, whose `rust-std` ships
-      # on nightly until Rust 1.100 makes the target stable (2026-11-12), and the nightly
-      # is pinned to the date the `Makefile`'s `COMPONENT_TOOLCHAIN` defaults to so the
-      # two cannot drift. Nightly first, so that a bare `cargo` picks stable.
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2026-09-15
-          targets: wasm32-wasip3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # Node 26 is the floor the package declares: jco's glue for this component uses
-      # JSPI (`WebAssembly.Suspending`), and the package is ESM-only because the
-      # component is instantiated by a top-level `await`.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: npm
-          cache-dependency-path: javascript/package-lock.json
-      # Bun runs the corpus through the package too, and `test/node/bun.test.mjs` is the
-      # test that says so. Without it that one suite skips with its reason printed, which
-      # is a weaker gate than the one this workflow can afford.
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4'
-      # `make check-js` builds the component with the pinned nightly (through `make
-      # component`), transpiles it with jco, compiles the wrapper, type-checks the
-      # examples against the package's own `exports`, runs the glue's suites and all 125
-      # conformance cases in Node and in Bun, and packs the tarball dry. The three seams
-      # jco cannot run are `make check-js-e2e`, which is red by design and is not here.
-      - run: make check-js
 
   deny:
     name: cargo-deny

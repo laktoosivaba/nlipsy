@@ -40,8 +40,11 @@ there to get wrong, by construction rather than by fix.
 ## 1. The rule: no export without a seed
 
 Every item in `nlipsy.wit` cites, in its doc comment, the clause it implements and the
-**seed** it is lifted from — a file and a line in this workspace, spelled
-`crates/nlipsy-core/src/serve.rs:263`. An item with no seed may not be added.
+**seed** it is lifted from — an item in this workspace, named by the file that defines
+it and its Rust path inside that file: `crates/nlipsy-core/src/serve.rs::serve`, or
+`crates/nlipsy-core/src/conformity.rs::Conformity::check` for a member. Never by
+line: a line number drifts with every edit above it, and an item moves only when
+somebody moves it. An item with no seed may not be added.
 
 The rule is not bookkeeping. The engine's claim is that there is one implementation of
 each rule and that a host in a second language contains none of its own. An export with
@@ -102,30 +105,45 @@ from the `wasip3` crate: see `deps/README.md` for the version, the licence and w
 six files are there when the world reaches two of them.
 
 **The seeds still point where they say.** `check-seeds.mjs` is the second line of that
-target and it enforces §1's rule rather than restating it: it reads every backticked
-`path:line` out of `nlipsy.wit` and out of §3's table, checks the file and the line
-exist, and checks that the line mentions the item the citation is for. The item is any
-Rust name backticked in the same block — one doc comment, or one table row — with a
-qualified name contributing both halves (`Conformity::check` is checked as `check` and
-as `Conformity`), and the WIT item's own name in Rust's three spellings
-(`status-map` → `StatusMap`, `status_map`, `STATUS_MAP`) when the prose names none.
-`:201` continues the previous citation's file and `path:from–to` is a range. A citation
-with no name anywhere in its block fails too: there is nothing to check it against,
-which is the same hole by another route.
+target and it enforces §1's rule rather than restating it. A citation is one backticked
+token — a path from the repository root to a `.rs` file, `::`, and one or two Rust path
+segments — and it must name an item that file defines:
 
-It reads `nlipsy.wit` and §3 of this file and nothing else, which is also what keeps
-`deps/` out of its way: those are someone else's interfaces and have no seed here.
+- **one segment** is a free item: `crates/nlipsy-core/src/serve.rs::serve` needs a
+  `fn`, `struct`, `enum`, `trait`, `type`, `const`, `static`, `mod`, `union` or
+  `macro_rules!` called `serve` that is not inside an `impl` or a `trait` — a method
+  is never cited bare;
+- **two segments** is a member of the first: a `fn`, `const` or `type` whose nearest
+  enclosing item is an `impl` for that type or the `trait` of that name — which is how
+  `crates/nlipsy-http/src/status.rs::StatusMap::default` is found, inside
+  `impl Default for StatusMap` — or a field of the struct, or a variant of the enum,
+  one level inside its body, as
+  `crates/nlipsy-server/src/server.rs::ServerConfig::principal_header` is.
 
-It exists because a `file:line` citation drifts the moment the file above it grows, and
-a table that can be wrong without anything noticing is a convention rather than a rule.
-Node and no dependency, so it runs wherever `make check-wit` does; every citation, in
-well under a second.
+Every token of that shape in `nlipsy.wit` and anywhere in this file is checked, and a
+backticked file name followed by a colon and a line number fails outright, so the
+retired form cannot creep back in. The source is read as rustfmt leaves it, which
+`make check` enforces: an item's body closes at the indentation it opened at, so nesting
+is read from indentation and no Rust is parsed, and a `cfg_client! { … }` invocation is
+read through rather than taken for an item. A failure names where the item *is* defined
+in that file, when it is.
+
+It reads `nlipsy.wit` and this file and nothing else, which is also what keeps `deps/`
+out of its way: those are someone else's interfaces and have no seed here.
+
+It exists because a citation by line drifts the moment the file above it grows — and
+drifts quietly, because the line it lands on usually still mentions something nearby —
+and a table that can be wrong without anything noticing is a convention rather than a
+rule. Node and no dependency, so it runs wherever `make check-wit` does; every citation,
+in well under a second.
 
 It is **not** part of `check`, for the reason `check-wasm` is not: it needs a tool a
 fresh checkout does not have (`cargo install wasm-tools --locked`), and a check that
 cannot run is a check that gets commented out. The `Makefile` says so at the target. CI
-runs it in the `component` job, which installs `wasm-tools` for `make check-component`
-anyway and runs this first, because a failure here explains every failure below it.
+runs it in the `component` job of `.github/workflows/component.yml`, the workflow kept
+apart from the one a release waits on, which installs `wasm-tools` for
+`make check-component` anyway and runs this first, because a failure here explains every
+failure below it.
 
 **The file compiles.** Parsing is not enough: a keyword used as a name, or a method
 that collides with an accessor wit-bindgen generates, parses cleanly and fails only when
@@ -210,57 +228,57 @@ first block.
 
 | WIT | seed |
 |---|---|
-| `number` | `serde_json::Number` as `Content::Number` holds it — `crates/nlipsy-protocol/src/content.rs:109` |
-| `content` | `Content` — `crates/nlipsy-protocol/src/content.rs:109`; the `structured` spelling is `Content::to_json_value` (`:201`) |
-| `format` | `Format`, ECMA-430 Table 1 — `crates/nlipsy-protocol/src/message.rs:39`, order from `Format::ALL` (`:58`) |
-| `submessage` | `Submessage` — `crates/nlipsy-protocol/src/message.rs:131` |
-| `message` | `Message` — `crates/nlipsy-protocol/src/message.rs:288` |
-| `wire` | `Wire` — `crates/nlipsy-protocol/src/content.rs:78` |
-| `parse-error-kind` | the corpus's kinds (`conformance/README.md`, "Expectations") as `describe` maps them — `crates/conformance/src/lib.rs:289`; `unmapped` from the same function |
-| `parse-error` | `ParseError` — `crates/nlipsy-protocol/src/error.rs:26`; `path` from `ParseError::path` (`:249`); `field` from `ErrorDescription` (`crates/conformance/src/lib.rs:267`) |
-| `severity` | `Severity` — `crates/nlipsy-protocol/src/error.rs:272` |
-| `violation` | `Violation` — `crates/nlipsy-protocol/src/error.rs:299` |
-| `disposition` | `Disposition` — `crates/nlipsy-core/src/conformity.rs:138` |
-| `finding` | `Finding` — `crates/nlipsy-core/src/conformity.rs:246` |
-| `token-ceiling` | `Rejected::TooManyTokens` and its two named fields — `crates/nlipsy-core/src/conformity.rs:334` |
-| `rejected` | `Rejected` — `crates/nlipsy-core/src/conformity.rs:325` |
-| `finished` | `Finished` — `crates/nlipsy-core/src/conformity.rs:359`; `withheld` from `Finished::withheld` (`:374`) |
-| `token-kind` | `TokenKind` — `crates/nlipsy-core/src/token.rs:27` |
-| `context` | `Context` and its two named fields — `crates/nlipsy-core/src/context.rs:27`; `exchange` replaces `Context::extensions` (`:47`), which is a Rust type map and cannot cross |
-| `layer-step` | `Middleware` — `crates/nlipsy-core/src/middleware.rs:90` — split around `Next` (`:139`), whose `run` (`:170`) is what `pass` continues into and `answer` does not |
-| `config` | `ConformityConfig` — `crates/nlipsy-core/src/conformity.rs:79` |
-| `policy` | `Policy` — `crates/nlipsy-core/src/conformity.rs:166` |
-| `rejection` | `Rejection` — `crates/nlipsy-core/src/conformity.rs:224` |
-| `status-map` | `StatusMap` — `crates/nlipsy-http/src/status.rs:37` |
+| `number` | `serde_json::Number` as `crates/nlipsy-protocol/src/content.rs::Content::Number` holds it |
+| `content` | `crates/nlipsy-protocol/src/content.rs::Content`; the `structured` spelling is `crates/nlipsy-protocol/src/content.rs::Content::to_json_value` |
+| `format` | `crates/nlipsy-protocol/src/message.rs::Format`, ECMA-430 Table 1; the order from `crates/nlipsy-protocol/src/message.rs::Format::ALL` |
+| `submessage` | `crates/nlipsy-protocol/src/message.rs::Submessage` |
+| `message` | `crates/nlipsy-protocol/src/message.rs::Message` |
+| `wire` | `crates/nlipsy-protocol/src/content.rs::Wire` |
+| `parse-error-kind` | the corpus's kinds (`conformance/README.md`, "Expectations") as `crates/conformance/src/lib.rs::describe` maps them; `unmapped` from the same function |
+| `parse-error` | `crates/nlipsy-protocol/src/error.rs::ParseError`; `path` from `crates/nlipsy-protocol/src/error.rs::ParseError::path`; `field` from `crates/conformance/src/lib.rs::ErrorDescription` |
+| `severity` | `crates/nlipsy-protocol/src/error.rs::Severity` |
+| `violation` | `crates/nlipsy-protocol/src/error.rs::Violation` |
+| `disposition` | `crates/nlipsy-core/src/conformity.rs::Disposition` |
+| `finding` | `crates/nlipsy-core/src/conformity.rs::Finding` |
+| `token-ceiling` | `crates/nlipsy-core/src/conformity.rs::Rejected::TooManyTokens` and its two named fields |
+| `rejected` | `crates/nlipsy-core/src/conformity.rs::Rejected` |
+| `finished` | `crates/nlipsy-core/src/conformity.rs::Finished`; `withheld` from `crates/nlipsy-core/src/conformity.rs::Finished::withheld` |
+| `token-kind` | `crates/nlipsy-core/src/token.rs::TokenKind` |
+| `context` | `crates/nlipsy-core/src/context.rs::Context` and its two named fields; `exchange` replaces `crates/nlipsy-core/src/context.rs::Context::extensions`, which is a Rust type map and cannot cross |
+| `layer-step` | `crates/nlipsy-core/src/middleware.rs::Middleware`, split around `crates/nlipsy-core/src/middleware.rs::Next`, whose `crates/nlipsy-core/src/middleware.rs::Next::run` is what `pass` continues into and `answer` does not |
+| `config` | `crates/nlipsy-core/src/conformity.rs::ConformityConfig` |
+| `policy` | `crates/nlipsy-core/src/conformity.rs::Policy` |
+| `rejection` | `crates/nlipsy-core/src/conformity.rs::Rejection` |
+| `status-map` | `crates/nlipsy-http/src/status.rs::StatusMap` |
 | `cors` | **none — the binding's own** (§1): no cross-origin header at all unless the request carried an `Origin` that matches |
-| `http-options` | `ServerConfig` — `crates/nlipsy-server/src/server.rs:122`; the limit is `DEFAULT_MAX_REQUEST_BODY_SIZE` (`crates/nlipsy-http/src/binding.rs:68`) and the header `CORRELATOR_HEADER` (`:37`) |
-| `unavailable` | `EndpointError::Unavailable` — `crates/nlipsy-core/src/endpoint.rs:143` |
-| `endpoint-error` | `EndpointError` — `crates/nlipsy-core/src/endpoint.rs:143` |
-| `outcome` | `Outcome` — `crates/nlipsy-core/src/serve.rs:64` |
-| `owed` | `Owed` — `crates/nlipsy-core/src/serve.rs:145` |
-| `served` | `Served` — `crates/nlipsy-core/src/serve.rs:113` |
-| `http-detail`, `exchange-detail` | `ExchangeDetail` — `crates/nlipsy-core/src/transport.rs:89`; the delay is read by `parse_retry_after` — `crates/nlipsy-http/src/retry.rs:49` |
-| `exchange` | `Exchange` — `crates/nlipsy-core/src/transport.rs:55` |
-| `transport-failure`, `transport-error` | `TransportError` — `crates/nlipsy-core/src/transport.rs:130` |
-| `opaque`, `body` | `Body` — `crates/nlipsy-core/src/transport.rs:240`; the preview length is `OPAQUE_PREVIEW` (`:45`) |
-| `reply` | `Reply` — `crates/nlipsy-core/src/transport.rs:272`; `text` from `Reply::text` (`:328`), `is-error` from `Reply::is_error` (`:417`) |
-| `reply.tokens` | `Reply::tokens` — `crates/nlipsy-core/src/transport.rs:363`; the first submessage is chained in by `first_submessage_token` — `crates/nlipsy-core/src/first_submessage.rs:28` |
-| `reply.conversation-tokens`, `reply.authentication-tokens` | `Reply::conversation_tokens` — `crates/nlipsy-core/src/transport.rs:386`; `Reply::authentication_tokens` — `:399`; both are derived from `tokens` above, so the three cannot disagree |
+| `http-options` | `crates/nlipsy-server/src/server.rs::ServerConfig`; the limit is `crates/nlipsy-http/src/binding.rs::DEFAULT_MAX_REQUEST_BODY_SIZE` and the header `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER` |
+| `unavailable` | `crates/nlipsy-core/src/endpoint.rs::EndpointError::Unavailable` |
+| `endpoint-error` | `crates/nlipsy-core/src/endpoint.rs::EndpointError` |
+| `outcome` | `crates/nlipsy-core/src/serve.rs::Outcome` |
+| `owed` | `crates/nlipsy-core/src/serve.rs::Owed` |
+| `served` | `crates/nlipsy-core/src/serve.rs::Served` |
+| `http-detail`, `exchange-detail` | `crates/nlipsy-core/src/transport.rs::ExchangeDetail`; the delay is read by `crates/nlipsy-http/src/retry.rs::parse_retry_after` |
+| `exchange` | `crates/nlipsy-core/src/transport.rs::Exchange` |
+| `transport-failure`, `transport-error` | `crates/nlipsy-core/src/transport.rs::TransportError` |
+| `opaque`, `body` | `crates/nlipsy-core/src/transport.rs::Body`; the preview length is `crates/nlipsy-core/src/transport.rs::OPAQUE_PREVIEW` |
+| `reply` | `crates/nlipsy-core/src/transport.rs::Reply`; `text` from `crates/nlipsy-core/src/transport.rs::Reply::text`, `is-error` from `crates/nlipsy-core/src/transport.rs::Reply::is_error` |
+| `reply.tokens` | `crates/nlipsy-core/src/transport.rs::Reply::tokens`; the first submessage is chained in by `crates/nlipsy-core/src/first_submessage.rs::first_submessage_token` |
+| `reply.conversation-tokens`, `reply.authentication-tokens` | `crates/nlipsy-core/src/transport.rs::Reply::conversation_tokens`; `crates/nlipsy-core/src/transport.rs::Reply::authentication_tokens`; both are derived from `tokens` above, so the three cannot disagree |
 
 ### `export interface protocol` — ECMA-430 clause 5
 
 | WIT | seed |
 |---|---|
-| `decode` | `Message::from_json_bytes` — `crates/nlipsy-protocol/src/message.rs:469`; `Message::from_cbor_slice` — `:589` |
-| `encode` | `Message::to_json_vec` — `crates/nlipsy-protocol/src/message.rs:631`; `Message::to_cbor_vec` — `:610`; the canonical JSON string is `to_json_string` (`:625`) |
-| `validate` | `Message::validate` — `crates/nlipsy-protocol/src/message.rs:640` |
-| `is-control` | `Message::is_control` — `crates/nlipsy-protocol/src/message.rs:408`; the routing use is `Dispatcher::route` — `crates/nlipsy-core/src/dispatch.rs:54` |
-| `extract-text` | `Message::extract_text` — `crates/nlipsy-protocol/src/message.rs:655` |
-| `first-submessage-token` | `first_submessage_token` — `crates/nlipsy-core/src/first_submessage.rs:28` |
-| `token-count` | `token_count` — `crates/nlipsy-core/src/conformity.rs:51` |
-| `token-kind-of` | `Submessage::is_conversation_token` — `crates/nlipsy-protocol/src/message.rs:209`; `Submessage::is_authentication_token` — `:204`; the three-way classification is `canonical_tokens` — `crates/conformance/src/lib.rs:376` |
-| `upload-request` | `Message::upload_request` — `crates/nlipsy-protocol/src/message.rs:368` |
-| `upload-response` | `Message::upload_response` — `crates/nlipsy-protocol/src/message.rs:384` |
+| `decode` | `crates/nlipsy-protocol/src/message.rs::Message::from_json_bytes`; `crates/nlipsy-protocol/src/message.rs::Message::from_cbor_slice` |
+| `encode` | `crates/nlipsy-protocol/src/message.rs::Message::to_json_vec`; `crates/nlipsy-protocol/src/message.rs::Message::to_cbor_vec`; the canonical JSON string is `crates/nlipsy-protocol/src/message.rs::Message::to_json_string` |
+| `validate` | `crates/nlipsy-protocol/src/message.rs::Message::validate` |
+| `is-control` | `crates/nlipsy-protocol/src/message.rs::Message::is_control`; the routing use is `crates/nlipsy-core/src/dispatch.rs::Dispatcher::route` |
+| `extract-text` | `crates/nlipsy-protocol/src/message.rs::Message::extract_text` |
+| `first-submessage-token` | `crates/nlipsy-core/src/first_submessage.rs::first_submessage_token` |
+| `token-count` | `crates/nlipsy-core/src/conformity.rs::token_count` |
+| `token-kind-of` | `crates/nlipsy-protocol/src/message.rs::Submessage::is_conversation_token`; `crates/nlipsy-protocol/src/message.rs::Submessage::is_authentication_token`; the three-way classification is `crates/conformance/src/lib.rs::canonical_tokens` |
+| `upload-request` | `crates/nlipsy-protocol/src/message.rs::Message::upload_request` |
+| `upload-response` | `crates/nlipsy-protocol/src/message.rs::Message::upload_response` |
 
 ### `import interface host-endpoint` — the handler, and what it configures
 
@@ -273,59 +291,59 @@ is per-store — and `types.context` says the same thing on the field.
 
 | WIT | seed |
 |---|---|
-| `name` | `Endpoint::name` — `crates/nlipsy-core/src/endpoint.rs:35` |
-| `conformity` | `ConformityConfig` — `crates/nlipsy-core/src/conformity.rs:79`; read per call, which is what `Conformity::new` (`:396`) is handed |
-| `rejection-policy` | `Rejection` — `crates/nlipsy-core/src/conformity.rs:224` |
-| `http-binding` | `ServerConfig` — `crates/nlipsy-server/src/server.rs:122` |
-| `answer` | `Endpoint::handle` — `crates/nlipsy-core/src/endpoint.rs:52`, returning a `Message` exactly as the trait does: `finish` is at the bottom of the guest's own stack (`Tail`, `crates/nlipsy-core/src/serve.rs:458`) and no host produces a `Finished` |
+| `name` | `crates/nlipsy-core/src/endpoint.rs::Endpoint::name` |
+| `conformity` | `crates/nlipsy-core/src/conformity.rs::ConformityConfig`; read per call, which is what `crates/nlipsy-core/src/conformity.rs::Conformity::new` is handed |
+| `rejection-policy` | `crates/nlipsy-core/src/conformity.rs::Rejection` |
+| `http-binding` | `crates/nlipsy-server/src/server.rs::ServerConfig` |
+| `answer` | `crates/nlipsy-core/src/endpoint.rs::Endpoint::handle`, returning a `Message` exactly as the trait does: `finish` is at the bottom of the guest's own stack (`crates/nlipsy-core/src/serve.rs::Tail`) and no host produces a `Finished` |
 
 ### `import interface host-layers` — the deployment's layers
 
 | WIT | seed |
 |---|---|
-| `count` | the length of the stack `Next::new` is given — `crates/nlipsy-core/src/middleware.rs:149` |
-| `before` | `Middleware::call` — `crates/nlipsy-core/src/middleware.rs:98` — up to its `Next::run`; the `answer` case is the `Ok` a layer may return without calling it |
-| `after` | the same `Middleware::call` — `crates/nlipsy-core/src/middleware.rs:98` — after its `Next::run` returns |
+| `count` | the length of the stack `crates/nlipsy-core/src/middleware.rs::Next::new` is given |
+| `before` | `crates/nlipsy-core/src/middleware.rs::Middleware::call`, up to its `Next::run`; the `answer` case is the `Ok` a layer may return without calling it |
+| `after` | the same `crates/nlipsy-core/src/middleware.rs::Middleware::call`, after its `Next::run` returns |
 
 ### `import interface host-authority` — §6.2's exception and §6.2.1's memory
 
 | WIT | seed |
 |---|---|
-| `is-own` | `TokenAuthority::is_own` — `crates/nlipsy-core/src/token.rs:111` |
-| `issued` | `TokenAuthority::issued` — `crates/nlipsy-core/src/token.rs:126` |
-| `mint` | `TokenAuthority::mint` — `crates/nlipsy-core/src/token.rs:140` |
+| `is-own` | `crates/nlipsy-core/src/token.rs::TokenAuthority::is_own` |
+| `issued` | `crates/nlipsy-core/src/token.rs::TokenAuthority::issued` |
+| `mint` | `crates/nlipsy-core/src/token.rs::TokenAuthority::mint` |
 
 ### `import interface host-transport`, `host-record-sink`
 
 | WIT | seed |
 |---|---|
-| `host-transport.send` | `Transport::exchange` — `crates/nlipsy-core/src/transport.rs:172`; renamed because an interface has one namespace for its types and its functions, and the `exchange` record is in it |
-| `host-record-sink.write` | `RecordSink::record` — `crates/nlipsy-core/src/record.rs:287`; the line's spelling is `Recorded::to_json_line` — `:109` |
+| `host-transport.send` | `crates/nlipsy-core/src/transport.rs::Transport::exchange`; renamed because an interface has one namespace for its types and its functions, and the `exchange` record is in it |
+| `host-record-sink.write` | `crates/nlipsy-core/src/record.rs::RecordSink::record`; the line's spelling is `crates/nlipsy-core/src/record.rs::Recorded::to_json_line` |
 
 ### `export interface engine` — clause 6 and the composed order
 
 | WIT | seed |
 |---|---|
-| `default-config` | `impl Default for ConformityConfig` — `crates/nlipsy-core/src/conformity.rs:92`; the ceiling is `DEFAULT_MAX_TOKENS_PER_MESSAGE` — `:70` |
-| `default-rejection` | `impl Default for Policy` — `crates/nlipsy-core/src/conformity.rs:177`; `Rejection` derives it — `:224` |
-| `default-http-options` | `impl Default for ServerConfig` — `crates/nlipsy-server/src/server.rs:155` — assembled in the guest from the three values that crate assembles it from, because it does not compile for `wasm32-wasip3`: `DEFAULT_MAX_REQUEST_BODY_SIZE` (`crates/nlipsy-http/src/binding.rs:68`), `CORRELATOR_HEADER` (`:37`) and `impl Default for StatusMap` (`crates/nlipsy-http/src/status.rs:105`). Reachable by a host that **instantiates** the component and calls its exports — the npm package does — and **not** by an end-point component composed with `wac plug`, which sees the engine's imports and none of its exports; a plugged end-point writes the eleven values out, and `examples/echo-endpoint/src/host.rs` is what that looks like |
-| `owed-by` | `owed` — `crates/nlipsy-core/src/serve.rs:168` |
-| `public-message` | `Outcome::public_message` — `crates/nlipsy-core/src/serve.rs:84`; the failure half is `EndpointError::public_message` — `crates/nlipsy-core/src/endpoint.rs:201` |
-| `retry-after-of` | `Outcome::retry_after` — `crates/nlipsy-core/src/serve.rs:99`; the failure half is `EndpointError::retry_after` — `crates/nlipsy-core/src/endpoint.rs:222` |
-| `error-reply` | `error_reply` — `crates/nlipsy-core/src/serve.rs:206` |
-| `check` | `Conformity::check` — `crates/nlipsy-core/src/conformity.rs:441` |
-| `finish` | `Conformity::finish` — `crates/nlipsy-core/src/conformity.rs:481` |
-| `serve` | `serve` — `crates/nlipsy-core/src/serve.rs:263`; the step it runs unconditionally afterwards is `Conformity::close` — `crates/nlipsy-core/src/conformity.rs:514` |
-| `serve-message` | `serve_message` — `crates/nlipsy-core/src/serve.rs:392`; the composer under both is `serve_answered` — `:325` |
+| `default-config` | `crates/nlipsy-core/src/conformity.rs::ConformityConfig::default`; the ceiling is `crates/nlipsy-core/src/conformity.rs::DEFAULT_MAX_TOKENS_PER_MESSAGE` |
+| `default-rejection` | `crates/nlipsy-core/src/conformity.rs::Policy::default`; `crates/nlipsy-core/src/conformity.rs::Rejection` derives it |
+| `default-http-options` | `crates/nlipsy-server/src/server.rs::ServerConfig::default`, assembled in the guest from the three values that crate assembles it from, because it does not compile for `wasm32-wasip3`: `crates/nlipsy-http/src/binding.rs::DEFAULT_MAX_REQUEST_BODY_SIZE`, `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER` and `crates/nlipsy-http/src/status.rs::StatusMap::default`. Reachable by a host that **instantiates** the component and calls its exports — the npm package does — and **not** by an end-point component composed with `wac plug`, which sees the engine's imports and none of its exports; a plugged end-point writes the eleven values out, and `examples/echo-endpoint/src/host.rs` is what that looks like |
+| `owed-by` | `crates/nlipsy-core/src/serve.rs::owed` |
+| `public-message` | `crates/nlipsy-core/src/serve.rs::Outcome::public_message`; the failure half is `crates/nlipsy-core/src/endpoint.rs::EndpointError::public_message` |
+| `retry-after-of` | `crates/nlipsy-core/src/serve.rs::Outcome::retry_after`; the failure half is `crates/nlipsy-core/src/endpoint.rs::EndpointError::retry_after` |
+| `error-reply` | `crates/nlipsy-core/src/serve.rs::error_reply` |
+| `check` | `crates/nlipsy-core/src/conformity.rs::Conformity::check` |
+| `finish` | `crates/nlipsy-core/src/conformity.rs::Conformity::finish` |
+| `serve` | `crates/nlipsy-core/src/serve.rs::serve`; the step it runs unconditionally afterwards is `crates/nlipsy-core/src/conformity.rs::Conformity::close` |
+| `serve-message` | `crates/nlipsy-core/src/serve.rs::serve_message`; the composer under both is `crates/nlipsy-core/src/serve.rs::serve_answered` |
 
 ### `export interface client` — the client half
 
 | WIT | seed |
 |---|---|
-| `call` | `Client::send` — `crates/nlipsy-core/src/transport.rs:576`, over `encode_request` (`:442`) and `decode_reply` (`:466`); the wire is `Client::on_wire` (`:551`); the request's shape is `NLIP_PATH` (`crates/nlipsy-http/src/binding.rs:21`), `CORRELATOR_HEADER` (`:37`) and `CONTENT_TYPE` (`:57`), and the delay is `parse_retry_after` (`crates/nlipsy-http/src/retry.rs:49`) |
-| `call-through` | the same `Client::send` — `crates/nlipsy-core/src/transport.rs:576` — over the host's `Transport` (`:172`) |
-| `call-recording` | `Recorder` — `crates/nlipsy-core/src/record.rs:294`; the line is `Recorded::to_json_line` (`:109`) and what it holds is `Recorded::of` (`:73`) |
-| `replay` | `Replay::from_jsonl` — `crates/nlipsy-core/src/record.rs:362`; the wire is `Replay::on_wire` (`:380`); the error is `ReplayError` (`:222`) |
+| `call` | `crates/nlipsy-core/src/transport.rs::Client::send`, over `crates/nlipsy-core/src/transport.rs::encode_request` and `crates/nlipsy-core/src/transport.rs::decode_reply`; the wire is `crates/nlipsy-core/src/transport.rs::Client::on_wire`; the request's shape is `crates/nlipsy-http/src/binding.rs::NLIP_PATH`, `crates/nlipsy-http/src/binding.rs::CORRELATOR_HEADER` and `crates/nlipsy-http/src/binding.rs::CONTENT_TYPE`, and the delay is `crates/nlipsy-http/src/retry.rs::parse_retry_after` |
+| `call-through` | the same `crates/nlipsy-core/src/transport.rs::Client::send`, over the host's `crates/nlipsy-core/src/transport.rs::Transport` |
+| `call-recording` | `crates/nlipsy-core/src/record.rs::Recorder`; the line is `crates/nlipsy-core/src/record.rs::Recorded::to_json_line` and what it holds is `crates/nlipsy-core/src/record.rs::Recorded::of` |
+| `replay` | `crates/nlipsy-core/src/record.rs::Replay::from_jsonl`; the wire is `crates/nlipsy-core/src/record.rs::Replay::on_wire`; the error is `crates/nlipsy-core/src/record.rs::ReplayError` |
 
 ### `export wasi:http/handler@0.3.0` — ECMA-431 §6, in the guest
 
@@ -334,18 +352,18 @@ are the ones the axum binding uses, because the two are two shells over one crat
 
 | behaviour | seed |
 |---|---|
-| the path and the method | `NLIP_PATH` — `crates/nlipsy-http/src/binding.rs:21`; `POST` is ECMA-431 §6's own word |
-| both spellings of the path | `router` mounts `NLIP_PATH` and the trailing-slash form together — `crates/nlipsy-server/src/server.rs:497–498` — because the ECMA-430 reference server mounts `/nlip/` while the reference client POSTs to `/nlip`, and serving both avoids depending on a redirect; the guest strips the slash rather than writing a second literal |
-| the body limit, and the `413` | `http-options.max-request-body-size`, answered with `too_large` — `crates/nlipsy-http/src/message.rs:74` — at `status-map.too-large` |
-| the status line | `StatusMap::of` — `crates/nlipsy-http/src/status.rs:138` |
-| `Retry-After` | `retry_after_value` — `crates/nlipsy-http/src/retry.rs:26` |
-| `Content-Type` | `CONTENT_TYPE` — `crates/nlipsy-http/src/binding.rs:57` |
-| the correlator, echoed or minted | `ServerConfig::correlator_for` — `crates/nlipsy-server/src/server.rs:156`; the bound is `MAX_CORRELATOR_LENGTH` (`:55`), which is that binding's number and this one takes it |
-| another method on the path | `method_not_allowed` — `crates/nlipsy-http/src/message.rs:58`, at `405` with `Allow: POST` — the header has no seed and none is wanted: its value is the method ECMA-431 §6 names, and a constant for it would be an export nothing in Rust reads |
-| any other path | `Message::error` — `crates/nlipsy-protocol/src/message.rs:288` — at `404`, so that a wrong path gets an NLIP error body rather than a runtime's plain text: one body shape for every answer |
+| the path and the method | `crates/nlipsy-http/src/binding.rs::NLIP_PATH`; `POST` is ECMA-431 §6's own word |
+| both spellings of the path | `crates/nlipsy-server/src/server.rs::Server::router` mounts `NLIP_PATH` and the trailing-slash form together, because the ECMA-430 reference server mounts `/nlip/` while the reference client POSTs to `/nlip`, and serving both avoids depending on a redirect; the guest strips the slash rather than writing a second literal |
+| the body limit, and the `413` | `http-options.max-request-body-size`, answered with `crates/nlipsy-http/src/message.rs::too_large` at `status-map.too-large` |
+| the status line | `crates/nlipsy-http/src/status.rs::StatusMap::of` |
+| `Retry-After` | `crates/nlipsy-http/src/retry.rs::retry_after_value` |
+| `Content-Type` | `crates/nlipsy-http/src/binding.rs::CONTENT_TYPE` |
+| the correlator, echoed or minted | `crates/nlipsy-server/src/server.rs::ServerConfig::correlator_for`; the bound is `crates/nlipsy-server/src/server.rs::MAX_CORRELATOR_LENGTH`, which is that binding's number and this one takes it |
+| another method on the path | `crates/nlipsy-http/src/message.rs::method_not_allowed`, at `405` with `Allow: POST` — the header has no seed and none is wanted: its value is the method ECMA-431 §6 names, and a constant for it would be an export nothing in Rust reads |
+| any other path | `crates/nlipsy-protocol/src/message.rs::Message::error`, at `404`, so that a wrong path gets an NLIP error body rather than a runtime's plain text: one body shape for every answer |
 | `OPTIONS` and the cross-origin headers | `types.cors`, which has no Rust seed (§1), under the rule stated there |
-| the reply's framing | `content-length` from the encoded body, as the guest's own client half sets it on a request and as `json_response` gets it from hyper — `crates/nlipsy-server/src/reply.rs:52` — so a peer can apply its own bound before reading a byte; `204` carries none |
-| `context.peer` | **no seed, and none possible**: `wasi:http@0.3.0` carries no remote address, so the guest answers `none`. The axum binding fills it from `ConnectInfo` — `Peer::label`, `crates/nlipsy-server/src/server.rs:318` — and `types.context.peer` says a host must read `none` as "this binding does not know" |
+| the reply's framing | `content-length` from the encoded body, as the guest's own client half sets it on a request and as `crates/nlipsy-server/src/reply.rs::json_response` gets it from hyper, so a peer can apply its own bound before reading a byte; `204` carries none |
+| `context.peer` | **no seed, and none possible**: `wasi:http@0.3.0` carries no remote address, so the guest answers `none`. The axum binding fills it from `ConnectInfo` — `crates/nlipsy-server/src/server.rs::Peer::label` — and `types.context.peer` says a host must read `none` as "this binding does not know" |
 
 ## 4. The corpus table
 
@@ -373,7 +391,7 @@ language", is the algorithm this table serves.
 | `expect.violations[]` | `protocol.validate(message)` → `violation.{rule, severity, path}` |
 | `expect.is_control` | `protocol.is-control(message)` |
 | `expect.text` | `protocol.extract-text(message, none)` |
-| `expect.tokens[]` | **derived** — `message.submessages` filtered on `format == 'token'`, in order. The filter is a comparison on a field this contract carries, not a rule: `Submessage::is_token` (`crates/nlipsy-protocol/src/message.rs:190`) is that equality and nothing else |
+| `expect.tokens[]` | **derived** — `message.submessages` filtered on `format == 'token'`, in order. The filter is a comparison on a field this contract carries, not a rule: `crates/nlipsy-protocol/src/message.rs::Submessage::is_token` is that equality and nothing else |
 | `expect.tokens[].subformat`, `.content` | the `submessage` record's own fields |
 | `expect.tokens[].kind` | `protocol.token-kind-of(submessage)`, with `none` as the corpus's `"other"` |
 | `expect.token_count` | `protocol.token-count(message)`. The first submessage is **included**, which is what makes it a different question from the length of `expect.tokens` — and what the token ceiling counts |
@@ -414,12 +432,12 @@ language", is the algorithm this table serves.
 Three fields deserve their own sentence.
 
 **`expect.findings[].direction`.** `served.findings` is one list — the request's
-findings from `check` first, then the reply's from `finish`
-(`crates/nlipsy-core/src/serve.rs:371–372`) — with no marked boundary and no count of
-either half. It is *not* recoverable. Three exchange cases carry a non-empty
-`findings` today and each has exactly one entry, so a runner driving `serve` alone
-would pass all three by accident; a case with one finding in each direction would be
-ambiguous, and the corpus exists to grow.
+findings from `check` first, then the reply's from `finish`, as
+`crates/nlipsy-core/src/serve.rs::serve_answered` concatenates them — with no marked
+boundary and no count of either half. It is *not* recoverable. Three exchange cases
+carry a non-empty `findings` today and each has exactly one entry, so a runner driving
+`serve` alone would pass all three by accident; a case with one finding in each
+direction would be ambiguous, and the corpus exists to grow.
 
 **`expect.reply.*` through `check`+`finish` rather than through `serve`.** The Rust
 runner never calls `serve` for an ordinary exchange case: clause 6 is two synchronous

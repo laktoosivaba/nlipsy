@@ -42,4 +42,4 @@ not to fix a comment. A version bump is a fresh copy of all six from the same cr
 version, with the table above updated and `make check-wit` re-run. The seed rule of
 `../README.md` §1 does not reach here: these are not nlipsy's items and have no seed in
 this workspace, which is also why `check-seeds.mjs` reads `nlipsy.wit` and `README.md`
-§3 and nothing else.
+and nothing else.
