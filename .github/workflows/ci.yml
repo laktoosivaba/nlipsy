@@ -58,7 +58,7 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -69,7 +69,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -89,7 +89,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # `--exclude nlipsy-conformance` and the line after it: `--all-features` would turn
@@ -114,7 +114,7 @@ jobs:
     name: feature sets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # The one job that is *not* one command over the whole workspace, and the
@@ -151,7 +151,7 @@ jobs:
     name: MSRV
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The MSRV is declared once, in `[workspace.package]`, and read back from there.
       # `cargo metadata | jq '.packages[0].rust_version'` would work today but answers
       # a different question — the first *member's* effective rust-version, which is
@@ -195,7 +195,7 @@ jobs:
     name: rustdoc
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Nightly, and `--cfg docsrs`, to build the crate the way docs.rs does:
       # `doc_cfg` is a nightly feature, and the `#[cfg_attr(docsrs, doc(cfg(...)))]`
       # attributes that mark feature-gated items are inert without the cfg. A broken
@@ -210,7 +210,7 @@ jobs:
     name: wasm32
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: rustup target add wasm32-unknown-unknown
@@ -258,7 +258,7 @@ jobs:
     name: cargo-deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Licences, advisories, banned crates and sources: see deny.toml.
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
@@ -268,7 +268,7 @@ jobs:
     name: unused dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: taiki-e/install-action@cargo-machete
       # Reads manifests and sources; no build, so no toolchain or cache needed.
       - run: cargo machete
@@ -280,7 +280,7 @@ jobs:
     # The baseline is the newest version on crates.io — 0.1.2 and up — so a breaking
     # change to a published API fails the pull request that makes it.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Every publishable member is checked with no `package` input — today
       # `nlipsy-protocol`, `nlipsy-core`, `nlipsy-http`, `nlipsy-http-client`,
       # `nlipsy-server` and `nlipsy`; `nlipsy-conformance` is `publish = false` and is
@@ -301,5 +301,5 @@ jobs:
     name: typos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: crate-ci/typos@v1

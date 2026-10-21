@@ -47,7 +47,7 @@ jobs:
     name: component
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Two toolchains, and the first one is the new part. The *artefact* is built for
       # `wasm32-wasip3`, whose `rust-std` ships on nightly until Rust 1.100 makes the
       # target stable (2026-11-12); the corpus host, clippy and the tests stay stable's.
@@ -100,7 +100,7 @@ jobs:
     name: javascript
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The same two toolchains as the `component` job, in the same order and for the
       # same reason: the *artefact* is built for `wasm32-wasip3`, whose `rust-std` ships
       # on nightly until Rust 1.100 makes the target stable (2026-11-12), and the nightly
