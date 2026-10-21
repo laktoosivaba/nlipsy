@@ -65,7 +65,7 @@ nlipsy-server = { path = "crates/nlipsy-server", version = "0.1.2" }
 # whose macro honours the WIT's own `async func` markers per function rather than an
 # all-or-nothing `async: true`, which is why no `async:` option appears anywhere in this
 # workspace and why the contract's mix of `func` and `async func` is what gets built.
-wit-bindgen = "0.62"
+wit-bindgen = "0.63"
 # The host the corpus's `component` mode runs the built component in, behind
 # `nlipsy-conformance`'s optional `component` feature so that `make check` never compiles
 # it. 48.x rather than the 49 release candidate, because 48 is the first release whose
