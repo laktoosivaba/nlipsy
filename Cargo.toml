@@ -116,7 +116,7 @@ tokio = { version = "1.49.1", default-features = false, features = ["rt-multi-th
 # §6.4, ECMA-432 §7.2), and JSON is the one encoding the model always supports.
 # `ciborium` is, because CBOR is one binding's frame (ECMA-432 §7.1) rather than the
 # message model, and a member that only ever speaks JSON should not compile it.
-base64 = "0.22.1"
+base64 = "0.23.1"
 ciborium = "0.2.2"
 # `http` is here for one type: `http::Extensions`, the type-map `nlipsy-core::Context`
 # carries so that a deployment can hand its own state to an endpoint without the core
