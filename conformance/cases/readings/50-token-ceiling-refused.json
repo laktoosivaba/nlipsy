@@ -1,0 +1,196 @@
+{
+  "kind": "exchange",
+  "title": "Thirty-three token submessages exceed the end-point's ceiling, and the request is refused",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "config": {
+      "max_tokens_per_message": 32
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "hi",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "group_1",
+        "content": "t-1"
+      },
+      {
+        "format": "token",
+        "subformat": "group_2",
+        "content": "t-2"
+      },
+      {
+        "format": "token",
+        "subformat": "group_3",
+        "content": "t-3"
+      },
+      {
+        "format": "token",
+        "subformat": "group_4",
+        "content": "t-4"
+      },
+      {
+        "format": "token",
+        "subformat": "group_5",
+        "content": "t-5"
+      },
+      {
+        "format": "token",
+        "subformat": "group_6",
+        "content": "t-6"
+      },
+      {
+        "format": "token",
+        "subformat": "group_7",
+        "content": "t-7"
+      },
+      {
+        "format": "token",
+        "subformat": "group_8",
+        "content": "t-8"
+      },
+      {
+        "format": "token",
+        "subformat": "group_9",
+        "content": "t-9"
+      },
+      {
+        "format": "token",
+        "subformat": "group_10",
+        "content": "t-10"
+      },
+      {
+        "format": "token",
+        "subformat": "group_11",
+        "content": "t-11"
+      },
+      {
+        "format": "token",
+        "subformat": "group_12",
+        "content": "t-12"
+      },
+      {
+        "format": "token",
+        "subformat": "group_13",
+        "content": "t-13"
+      },
+      {
+        "format": "token",
+        "subformat": "group_14",
+        "content": "t-14"
+      },
+      {
+        "format": "token",
+        "subformat": "group_15",
+        "content": "t-15"
+      },
+      {
+        "format": "token",
+        "subformat": "group_16",
+        "content": "t-16"
+      },
+      {
+        "format": "token",
+        "subformat": "group_17",
+        "content": "t-17"
+      },
+      {
+        "format": "token",
+        "subformat": "group_18",
+        "content": "t-18"
+      },
+      {
+        "format": "token",
+        "subformat": "group_19",
+        "content": "t-19"
+      },
+      {
+        "format": "token",
+        "subformat": "group_20",
+        "content": "t-20"
+      },
+      {
+        "format": "token",
+        "subformat": "group_21",
+        "content": "t-21"
+      },
+      {
+        "format": "token",
+        "subformat": "group_22",
+        "content": "t-22"
+      },
+      {
+        "format": "token",
+        "subformat": "group_23",
+        "content": "t-23"
+      },
+      {
+        "format": "token",
+        "subformat": "group_24",
+        "content": "t-24"
+      },
+      {
+        "format": "token",
+        "subformat": "group_25",
+        "content": "t-25"
+      },
+      {
+        "format": "token",
+        "subformat": "group_26",
+        "content": "t-26"
+      },
+      {
+        "format": "token",
+        "subformat": "group_27",
+        "content": "t-27"
+      },
+      {
+        "format": "token",
+        "subformat": "group_28",
+        "content": "t-28"
+      },
+      {
+        "format": "token",
+        "subformat": "group_29",
+        "content": "t-29"
+      },
+      {
+        "format": "token",
+        "subformat": "group_30",
+        "content": "t-30"
+      },
+      {
+        "format": "token",
+        "subformat": "group_31",
+        "content": "t-31"
+      },
+      {
+        "format": "token",
+        "subformat": "group_32",
+        "content": "t-32"
+      },
+      {
+        "format": "token",
+        "subformat": "group_33",
+        "content": "t-33"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "refused",
+    "refused": {
+      "kind": "too-many-tokens",
+      "count": 33,
+      "limit": 32
+    },
+    "findings": []
+  },
+  "notes": "A ceiling is not in the standard; a bound on what an end-point will echo is a deployment's own protection against a message whose only content is work. What the standard *does* fix is what happens when the bound is reached, and it is not truncation: §6.2 obliges the end-point to return the same submessage for every token the message contains, so answering thirty-three with thirty-two would be a non-conforming reply that looks like a conforming one. Refusing the request says so out loud. The pair to this case is `ecma-430/40`, where thirty-two are all returned. `endpoint.reply` is absent because the refusal happens before the handler is asked anything. Not a rule of the standard; an implementation with no ceiling replies to this request and should skip this case by name, saying so — which is why the case sits here and its pair, `ecma-430/40`, does not."
+}

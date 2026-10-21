@@ -1,0 +1,25 @@
+{
+  // The examples, type-checked and never emitted.
+  //
+  // A second project rather than a second `include` in `tsconfig.json`, because the two
+  // are compiled under different rules and only one of them is published.
+  // `tsconfig.json` emits `dist/` from `src/` and must not see a file that imports the
+  // package by name; this one emits nothing, resolves `nlipsy` through the package's own
+  // `exports` (a *self-reference*, which is what makes an example read exactly like a
+  // consumer's code), and allows the `.ts` extension in a specifier — which is how Node
+  // finds `./endpoint.ts`, since it has no compiler in front of it.
+  //
+  // It therefore needs `dist/` to exist: `npm run build` first, then `npm run
+  // typecheck`, which is the order `make check-js` runs them in.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "outDir": "./.tsbuild-examples",
+    "declaration": false,
+    "allowJs": true,
+    "checkJs": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["examples/**/*.ts", "examples/**/*.mjs", "examples/**/*.js"]
+}

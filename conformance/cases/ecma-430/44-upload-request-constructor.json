@@ -1,0 +1,24 @@
+{
+  "title": "The §6.4 ¶2 upload request, as the constructor for it builds one",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4 ¶2",
+    "note": "composed: this is `Message::upload_request`'s output, for the `ask` recorded as this case's `expect.message.content`. A test in `crates/conformance/tests/` calls the constructor with that string and asserts it still produces exactly this file's `canonical_json`, so the shape is pinned from both ends: the corpus says what an implementation must produce for these bytes, and the test says the constructor produces those bytes. §6.4 ¶2 fixes the shape — \"a message with the MessageType field set to 'control', and the first submessage should include a text format request for the end-point to send large uploads\" — and `control` is the `MessageType` and not §6.3's boolean, because ¶2 names that field and no other."
+  },
+  "wire": "json",
+  "input": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please provide an end-point for large uploads.\"}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Please provide an end-point for large uploads."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Please provide an end-point for large uploads.",
+    "canonical_json": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please provide an end-point for large uploads.\"}"
+  },
+  "notes": "`ecma-430/26` records the same shape as a document a peer sent; this one records it as the shape a *constructor* must build, and the difference is which end the case holds. `input` is the constructor's own compact output rather than the indented spelling `/26` uses, so that the bytes a reader compares against the test are the bytes the test compares. The boolean `control` field is absent and its absence is asserted by `canonical_json`: §6.4 names `MessageType`, §6.3 names the boolean, and a constructor that wrote both would be discharging an obligation nobody gave it — `ecma-430/38` is where §6.3 then adds the boolean on top, because the exchange is a control one."
+}

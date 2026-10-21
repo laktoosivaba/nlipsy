@@ -1,0 +1,29 @@
+{
+  "title": "Text content that is null",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.4; Annex A (Content may be null)",
+    "note": "composed: Annex A allows a null Content, so the message decodes; §5.1.4 requires the content to match the format, and `text` means a string, so validate reports an Error. Contrast ecma-430/10-missing-content, where the field is absent and the message does not decode at all."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": null\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": null
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.1.4/text-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":null}"
+  },
+  "notes": "A missing `content` is an error while a null one is not, which is a fine distinction to hang on Annex A's informative schema. It is the only reading that lets Annex A's null mean anything."
+}

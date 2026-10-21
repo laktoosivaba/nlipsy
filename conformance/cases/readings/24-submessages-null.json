@@ -1,0 +1,23 @@
+{
+  "title": "`submessages` present but null",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.5",
+    "note": "composed: the field is optional, and a null is treated as its absence rather than as a wrong type."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": null\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  },
+  "notes": "A reading, not a stated rule; `wrong-type` would be defensible."
+}

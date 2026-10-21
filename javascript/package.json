@@ -1,0 +1,53 @@
+{
+  "name": "nlipsy",
+  "version": "0.1.0",
+  "description": "NLIP (ECMA-430) as a WebAssembly component: the protocol, clause 6's exchange and the ECMA-431 HTTP binding all run inside the component, and this package is the loader and the five adapters that give it your code.",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laktoosivaba/nlipsy.git",
+    "directory": "javascript"
+  },
+  "homepage": "https://github.com/laktoosivaba/nlipsy",
+  "bugs": "https://github.com/laktoosivaba/nlipsy/issues",
+  "keywords": [
+    "nlip",
+    "ecma-430",
+    "protocol",
+    "agent",
+    "webassembly",
+    "component-model"
+  ],
+  "engines": {
+    "node": ">=26.5.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs && node scripts/fixtures.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.examples.json",
+    "test": "vitest run",
+    "test:e2e": "NLIPSY_JS_E2E=1 vitest run --project e2e"
+  },
+  "dependencies": {
+    "@bytecodealliance/preview3-shim": "0.11.0"
+  },
+  "devDependencies": {
+    "@bytecodealliance/jco": "1.39.0",
+    "@types/node": "^24.13.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

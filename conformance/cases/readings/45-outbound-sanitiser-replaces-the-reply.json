@@ -1,0 +1,61 @@
+{
+  "kind": "exchange",
+  "title": "A reply that breaks clause 5 is replaced by an error message that still carries the echo",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "5.1.4, 6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": {
+        "oops": 1
+      }
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation_9.2.3.5",
+        "content": "cli-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "messagetype": "Error",
+      "control": null,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "cli-1"
+        }
+      ]
+    },
+    "withheld": true,
+    "findings": [
+      {
+        "direction": "outbound",
+        "rule": "ecma430-5.1.4/text-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ]
+  },
+  "notes": "The handler returned a `text` message whose content is an object, which §5.1.4 does not allow — the message-level case is `readings/12`. A malformed reply is worse for the peer than an error reply, because the peer has to guess what was meant, so the reply is replaced by a protocol-legal one and the finding is handed back for the runtime to log. Two readings are recorded here. The replacement's `MessageType: Error` is TR/113 §10's convention rather than a rule of clause 5. And the replacement happens *before* the echo, not after, so `cli-1` is in the reply: the peer's entitlement under §6.2 does not depend on the end-point's handler having worked, and an implementation that sanitised last would drop it on exactly the path where a peer most needs its state back. `withheld` is the third thing, and it is not derivable from the reply: a replacement error message and a handler that answered with `Message::error(..)` are the same bytes on the wire, and a binding reading only those bytes would report the end-point's failure as a success. `ecma-430/30` pins the other value."
+}

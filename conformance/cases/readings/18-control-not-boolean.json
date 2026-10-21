@@ -1,0 +1,19 @@
+{
+  "title": "`control` that is not a boolean",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.3 (\"the control field set to true\")",
+    "note": "composed: negative case for the boolean spelling of control — the string \"true\" is not true."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": \"true\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "wrong-type",
+      "path": "$",
+      "field": "control"
+    }
+  },
+  "notes": "§6.3 never gives the control field a type; that it is a boolean comes from the prose (\"set to true\") and from TR/113's figures, which send false. A more liberal reading would accept \"true\" as true."
+}

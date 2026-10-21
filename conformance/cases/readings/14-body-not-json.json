@@ -1,0 +1,17 @@
+{
+  "title": "A body that is not JSON",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§4.2, §5 (\"Each message ... is primarily represented as a JSON message\")",
+    "note": "composed: negative case for the JSON wire — what an intermediary's error page looks like when it arrives where a message was expected."
+  },
+  "wire": "json",
+  "input": "<html><body><h1>502 Bad Gateway</h1></body></html>",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "invalid-json",
+      "path": "$"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "kind": "exchange",
+  "title": "An authentication token is created and returned under the same rules as a conversation token",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.2",
+    "quote": "A client agent or server agent may create a submessage with the format field of 'token' and the subformat field beginning with 'authentication'. ... The other end-point is obligated to return the authentication token unmodified so that authentication can be performed seamlessly."
+  },
+  "endpoint": {
+    "config": {
+      "issue_authentication_token": true
+    },
+    "authority": {
+      "mint": {
+        "authentication": "auth-1"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "An international standards body."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "authentication",
+          "content": "auth-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "§6.2.2 adds no echo rule of its own: it names a subformat prefix, says the creator must be able to translate the token back into credentials, and leaves the returning to §6.2. So the only thing that distinguishes this case from `ecma-430/32` is which switch is on and which prefix appears — which is exactly the claim being recorded. \"Anonymous mode\" in TR/113 §10 is this: the end-point issues a credential to a peer that presented none."
+}

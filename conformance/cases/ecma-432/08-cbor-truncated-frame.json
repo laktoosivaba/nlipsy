@@ -1,0 +1,17 @@
+{
+  "title": "A CBOR frame that stops in the middle",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§11 Error handling (\"If CBOR decoding fails\")",
+    "note": "composed: the first 24 bytes of the encoding of Example 1 (case 03), produced by `conformance/tools/cbor_encode.py --prefix 24`. §11 exists precisely for this case; the corpus records the decode failure, not the endpoint's response to it."
+  },
+  "wire": "cbor",
+  "input_hex": "a56b4d65737361676554797065675265717565737466466f",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "cbor",
+      "path": "$"
+    }
+  }
+}

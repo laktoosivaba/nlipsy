@@ -1,0 +1,41 @@
+{
+  "title": "Proxy asks the integrator to combine three answers",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.2 (message with multiple submessages)",
+    "note": "verbatim, minimally repaired: the example's last two characters are `}]`, which closes an object that is not open and leaves both the submessages array and the message unclosed. They are transposed to `]}` — the array closes, then the message — which is the smallest change that makes the document parse. Nothing else is touched, including the ragged indentation of the third submessage."
+  },
+  "wire": "json",
+  "input": "{\n    \"messagetype\":\"Request\",\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"Please combine the requests in the submessages\",\n    \"submessages\":[\n        {\n            \"format\":\"text\",\n            \"subformat\":\"English\",\n            \"content\": \"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\"\n        },\n        {\n            \"format\":\"text\",\n            \"subformat\":\"English\",\n            \"content\":\"ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols.\"\n        },\n        {\"format\":\"text\",\n        \"subformat\":\"English\",\n        \"content\":\"ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.\"\n        }\n    ]}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "text",
+      "subformat": "english",
+      "content": "Please combine the requests in the submessages",
+      "submessages": [
+        {
+          "format": "text",
+          "subformat": "English",
+          "content": "Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing."
+        },
+        {
+          "format": "text",
+          "subformat": "English",
+          "content": "ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols."
+        },
+        {
+          "format": "text",
+          "subformat": "English",
+          "content": "ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript."
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Please combine the requests in the submessages Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing. ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols. ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please combine the requests in the submessages\",\"submessages\":[{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\"},{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols.\"},{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.\"}]}"
+  },
+  "notes": "The surrounding prose calls the messagetype field \"RequestType\", which is not a field name in ECMA-430 and does not appear in the example itself; the example spells it `messagetype`."
+}

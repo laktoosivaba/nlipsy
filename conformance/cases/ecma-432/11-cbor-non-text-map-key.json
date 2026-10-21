@@ -1,0 +1,18 @@
+{
+  "title": "CBOR map with an integer key",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; ECMA-430 §5 (\"as defined in ECMA-404\")",
+    "note": "composed: RFC 8949 §3.1 allows a map key of any type, while an ECMA-404 object's names are strings and §5 makes an NLIP message an ECMA-404 object. The structured payload here is the CBOR map {1: \"x\"}, which no JSON document could hold. The bytes come from conformance/tools/cbor_encode.py with the `$map` marker."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d61746a7374727563747572656469737562666f726d6174646a736f6e67636f6e74656e74a1016178",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "cbor",
+      "path": "$"
+    }
+  },
+  "notes": "A peer that keys a map by integer for compactness is doing something CBOR permits; the message is refused because re-encoding it as JSON would mean inventing a spelling for that key."
+}

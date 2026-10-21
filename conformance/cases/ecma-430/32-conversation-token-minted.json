@@ -1,0 +1,43 @@
+{
+  "kind": "exchange",
+  "title": "No conversation token from the peer, so the end-point creates one",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.1",
+    "quote": "Either the client agent or the server agent may be the first one to create a submessage with format field of 'token' and the subformat field starting with 'conversation'. The other agent can optionally add another submessage with the format of 'token' and the subformat of 'conversation' if it wants to maintain its own conversation identifier."
+  },
+  "endpoint": {
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "mint": {
+        "conversation": "srv-new"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "An international standards body."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation",
+          "content": "srv-new"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "\"Either the client agent or the server agent may be the first one to create\" one: here the client was not, so the server is. Issuance is optional — the clause says *may* — which is why the case has to turn it on: an end-point that keeps no session state creates nothing and is equally conforming. `mint` is what the scripted authority returns; a deployment's would sign a session identifier."
+}

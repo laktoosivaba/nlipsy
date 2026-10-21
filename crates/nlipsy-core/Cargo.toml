@@ -1,0 +1,71 @@
+[package]
+name = "nlipsy-core"
+description = "The NLIP runtime core: clause 6 of ECMA-430 as values and traits, with no opinion about execution"
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# has to travel inside the package rather than sit at the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they are at the package root.
+readme = "README.md"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/nlipsy-core"
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The message model. Everything in this crate is a rule *about* a `Message`, so this
+# is the one dependency that is not a matter of taste.
+nlipsy-protocol = { workspace = true }
+thiserror = { workspace = true }
+# For `http::Extensions` alone — see the comment on the workspace entry. Re-exported,
+# as jsonrpsee re-exports it, because it appears in `Context`'s public API and a
+# consumer must be able to name the same version.
+http = { workspace = true }
+
+# Both are the client half's and nothing else's: `Recorded` is a line of JSON whose
+# spelling is a compatibility promise (a recorded fixture has to keep loading), and
+# `Scripted::sent_json` reads a request back as a value. The impls are written by
+# hand, as `nlipsy-protocol` writes its own, so `serde_derive` never enters the graph
+# of a crate that only wanted an endpoint.
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+[features]
+# No defaults, as jsonrpsee has none: `nlipsy-core = "0.1"` compiles the shared items
+# and nothing else. An endpoint takes `server`, a client agent takes `client`, and a
+# deployment that federates takes both — which is jsonrpsee's split
+# (`core/src/lib.rs`, `cfg_client!` / `cfg_server!`) and holds here for the same
+# reason: the MCP bridge and the terminal client need the outbound half alone.
+client = ["dep:serde", "dep:serde_json"]
+server = []
+# The scripted transport the tests of *other* crates drive a client with. It cannot be
+# `#[cfg(test)]`: that compiles it only for this crate's own unit tests, and the
+# crates that need it are elsewhere. A release build of any of them compiles no part
+# of it.
+testing = ["client"]
+# Forwarded rather than declared: whether `Wire::Cbor` can be encoded at all is a
+# property of the message model (ECMA-432 §7.1). One feature keeps the two in step.
+cbor = ["nlipsy-protocol/cbor"]
+
+# docs.rs builds with `--cfg docsrs` set and every feature on, which is what makes
+# `#[cfg_attr(docsrs, doc(cfg(...)))]` render the "Available on crate feature" banner
+# on the two halves. Without it the index page shows the shared items only.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+# Only the tests. The crate itself has no executor and must keep having none — that is
+# the boundary this workspace's plan draws — but the one thing that cannot be tested
+# without one is the `Endpoint` implementation of `Conformity`, which is the whole
+# point of the wrapper. `rt` and `macros` and nothing else: no timers, no I/O drivers.
+[dev-dependencies]
+tokio = { version = "1.53.1", default-features = false, features = ["rt", "macros"] }

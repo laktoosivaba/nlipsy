@@ -1,0 +1,45 @@
+[package]
+name = "echo-endpoint"
+description = "A Rust end-point component for nlipsy's engine: five host imports, composed with wac; never published"
+# An example, and an example of the *deployment* shape rather than of an API: what it
+# shows is that a running NLIP end-point needs no JavaScript and no host language at all —
+# this component plus `crates/nlipsy-component`'s, plugged together, is a `wasmtime serve`
+# away from answering `curl`.
+publish = false
+
+version.workspace = true
+license.workspace = true
+
+# Not `edition.workspace`/`rust-version.workspace`, for `crates/nlipsy-component`'s
+# reason and no other: wit-bindgen 0.62's generated code is edition 2024 and past 1.85.
+# Nothing published depends on this, so its floor is a promise to nobody.
+edition = "2024"
+rust-version = "1.89"
+
+# Not `[lints] workspace = true`, and for `crates/nlipsy-component`'s reason: the
+# workspace *forbids* `unsafe_code` and every canonical-ABI shim `wit_bindgen::generate!`
+# writes is `unsafe`, with the proc macro's tokens carrying this crate's spans. The rest
+# of the workspace's lints are repeated verbatim.
+[lints.rust]
+missing_debug_implementations = "warn"
+rust_2024_compatibility = { level = "warn", priority = -1 }
+missing_docs = "warn"
+
+[lib]
+# `cdylib` is the artefact. `rlib` is what lets `make check` type-check this on the host
+# through the workspace's ordinary `cargo test --workspace`: wit-bindgen's generated code
+# compiles for a native target with every canonical-ABI entry point replaced by a stub,
+# so a break in this example is caught by the same gate as a break anywhere else rather
+# than on the day somebody builds the composition.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The message model, and nothing else. An end-point that echoes text needs clause 5's
+# types to read a request and build a reply; clause 6 is the engine's and this component
+# never sees it.
+nlipsy-protocol = { workspace = true }
+wit-bindgen = { workspace = true }
+# One call: `serde_json::Number::from_f64`, for the one content case the model cannot
+# build without it. `nlipsy-protocol` already builds on the same crate, so this costs the
+# artefact nothing.
+serde_json = { workspace = true }

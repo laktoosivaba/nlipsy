@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>nlipsy — a browser client</title>
+<main>
+  <h1>nlipsy in a browser</h1>
+  <p>
+    The browser is a <strong>client</strong>: a page cannot serve an incoming
+    <code>wasi:http/handler</code>, and the preview3 shim's browser build has no outgoing
+    <code>wasi:http/client</code> either — so the route is
+    <code>createClient({ transport })</code> over <code>fetch</code>, which is a transport
+    and not a binding.
+  </p>
+  <p><label>End-point <input id="url" size="48" value="http://127.0.0.1:8080/nlip" /></label></p>
+  <p><label>Say <input id="say" size="48" value="What is Ecma?" /></label></p>
+  <p><button id="send">Send</button></p>
+  <pre id="out"></pre>
+  <script type="module" src="./main.ts"></script>
+</main>

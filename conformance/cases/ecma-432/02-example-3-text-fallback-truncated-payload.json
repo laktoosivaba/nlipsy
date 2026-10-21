@@ -1,0 +1,40 @@
+{
+  "title": "Example 3: JSON text fallback (ellipsis removed)",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§8 Example 3",
+    "note": "composed from a verbatim example: Example 3 with the trailing `...` deleted from the content string. What is left is the standard's own payload and decodes to a 40-byte RIFF/WAVE header. Composed because the printed payload cannot be decoded."
+  },
+  "wire": "json",
+  "input": "{\n  \"MessageType\": \"Request\",\n  \"Format\": \"binary\",\n  \"Subformat\": \"audio/wav;base64\",\n  \"Content\": \"UklGRngAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YYAA\",\n  \"Submessages\": [\n    {\n      \"Label\": \"transcription\",\n      \"Format\": \"text\",\n      \"Subformat\": \"en-US\",\n      \"Content\": \"What's the current stock price of Tesla?\"\n    }\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "binary",
+      "subformat": "audio/wav;base64",
+      "content": {
+        "$bytes": "UklGRngAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YYAA"
+      },
+      "submessages": [
+        {
+          "label": "transcription",
+          "format": "text",
+          "subformat": "en-US",
+          "content": "What's the current stock price of Tesla?"
+        }
+      ]
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-encoding-parameter",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": "What's the current stock price of Tesla?",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"binary\",\"subformat\":\"audio/wav;base64\",\"content\":\"UklGRngAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YYAA\",\"submessages\":[{\"label\":\"transcription\",\"format\":\"text\",\"subformat\":\"en-US\",\"content\":\"What's the current stock price of Tesla?\"}]}"
+  },
+  "notes": "`audio/wav;base64` carries its encoding in the subformat where §7.2 already fixes base64 for the text fallback, and `wav;base64` is not the \"specific content encoding\" Table 1 asks for. Reported as a Warning rather than rejected, for the same reason as every other off-table subformat in §8: the clause calls its examples normative. The encoding part is non-empty, so the binary-encoding Error does not apply."
+}

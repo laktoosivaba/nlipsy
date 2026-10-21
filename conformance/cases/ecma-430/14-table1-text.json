@@ -1,0 +1,22 @@
+{
+  "title": "Table 1: format `text`, subformat is a language",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `text`",
+    "note": "composed: Table 1 gives the subformat of `text` as <lang> and §5.3 requires every end-point to support the subformat 'English'."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"English\",\n  \"content\": \"All conforming end-points support text with English.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "English",
+      "content": "All conforming end-points support text with English."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "All conforming end-points support text with English.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"All conforming end-points support text with English.\"}"
+  }
+}

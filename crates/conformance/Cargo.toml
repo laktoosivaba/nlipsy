@@ -1,0 +1,110 @@
+[package]
+name = "nlipsy-conformance"
+description = "Runs the language-neutral conformance corpus against nlipsy-protocol; never published"
+# The corpus it runs is `conformance/` in the repository root, above every package, so
+# it could not travel inside a `.crate` even if this were published — and it is not the
+# protocol, it is how the protocol is checked. An unpublished member is where a test
+# over data outside the packages belongs, which is the arrangement jsonrpsee uses for
+# its integration tests.
+publish = false
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# A normal dependency, not a dev-dependency: the library projects a `Message` into the
+# corpus's canonical model and maps a `ParseError` onto the corpus's kinds, so the crate
+# under test is what this one is written against. `tests/corpus.rs` is only the caller.
+nlipsy-protocol = { workspace = true }
+# Likewise for the exchange cases, and likewise a normal dependency: an exchange case's
+# expectations are `Conformity::check` and `Conformity::finish` — ECMA-430 clause 6 —
+# driven over a scripted `TokenAuthority`, and those are the core's. Only `server`: the
+# corpus asks what an end-point owes a peer, and the outbound half of the core (a
+# `Transport`, a `Client`) answers a different question and would pull serde_json in
+# through a second door.
+nlipsy-core = { workspace = true, features = ["server"] }
+# `derive` here rather than in the library it tests: the shape of a case file is worth
+# declaring as a type — `#[serde(deny_unknown_fields)]` is what makes an expectation the
+# harness does not know about fail loudly instead of being silently skipped. The
+# protocol crate writes its `Serialize`/`Deserialize` impls by hand, because the field
+# order of §5 and the base64 rule of §6.4 are not what a derive would produce, so a
+# consumer of the published crate never compiles this.
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# The `component` mode's host, and optional so that `make check` never compiles a
+# WebAssembly runtime. `nlipsy-component` is not in this list and cannot be: the corpus
+# runs the *built artefact*, loaded from `NLIPSY_COMPONENT` or from the default path a
+# `cargo build --target wasm32-wasip3` leaves it at, because a crate dependency would
+# link the guest's Rust into the runner and prove nothing about the component.
+wasmtime = { workspace = true, optional = true }
+wasmtime-wasi = { workspace = true, optional = true }
+# `wasi:http` is no longer the host's to provide *around* the component — it is the
+# component's own binding, in both directions — so the host has to satisfy
+# `wasi:http/types@0.3.0` (which the artefact imports because its `handler` export speaks
+# those resources) and `wasi:http/client@0.3.0`. `p3` is the feature that has both;
+# 48.0.2 is the first release whose `p3` module implements WASI 0.3.
+wasmtime-wasi-http = { workspace = true, optional = true }
+# A Tokio reactor, for the `component` mode alone. `wasmtime-wasi-http`'s default
+# outgoing sender panics without one — "there is no reactor running, must be called from
+# the context of a Tokio 1.x runtime" — and the HTTP-level tests make an outgoing
+# request. The park/unpark `block_on` of
+# `src/component.rs` still drives every call; the runtime is entered around it and spawns
+# nothing of the corpus's own.
+tokio = { workspace = true, optional = true }
+# The HTTP *types* and a body collector, for the `component` mode's HTTP-level tests
+# alone: `wasi:http/handler` is driven through `wasmtime_wasi_http::p3::bindings::Service`,
+# which takes an `http::Request` and hands back a `Response` whose body is an
+# `http_body` — so a test that asserts a status line and a body speaks those two crates.
+# `http` is already a dependency of `nlipsy-core` for `Extensions`; neither is a client
+# or a server.
+http = { workspace = true, optional = true }
+http-body-util = { workspace = true, optional = true }
+# The `Body` trait, for `BrokenBody` alone — a request body that yields a prefix and then
+# an error, which is the only way to drive `wasi:http`'s broken-body path from a test.
+http-body = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
+# ECMA-431 §6 as values, for the `component` mode alone. The corpus has no case kind for
+# a status code — it is clause 5 and clause 6 — so the only way the component's `http`
+# exports are checked is against the crate they were lifted from, value for value.
+# Optional, so a default build of this crate still depends on the two crates the corpus
+# is about and no more.
+nlipsy-http = { workspace = true, optional = true }
+
+# Forwarded rather than declared: the CBOR cases are ECMA-432 §7.1 frames, and whether
+# they can be decoded at all is a property of `nlipsy-protocol`. One feature keeps the
+# two in step, so that `--all-features` over the workspace runs those cases and a
+# default build skips and counts them instead of reporting a conformance it never checked.
+[features]
+cbor = ["nlipsy-protocol/cbor", "nlipsy-core/cbor"]
+
+# The same corpus, run through the built wasm component in wasmtime instead of against
+# the Rust crates — the first proof of the artefact that needs no JavaScript at all.
+# Off by default and not part of `make check`: it needs the `wasm32-wasip3` target on a
+# nightly toolchain, a built artefact and a WebAssembly runtime, which is three things a
+# fresh checkout does not have. `make check-component` is the target that has them all.
+#
+# `wasmtime-wasi/p3` is the one WASI world named here, because it is the one the artefact
+# imports: `wasi:cli@0.3.0` and `wasi:clocks@0.3.0`, no `wasi:io`, since 0.3 carries
+# streams natively. The workspace dependency turns the defaults off, so this is also what
+# brings `wasmtime/component-model-async` — and with it `async` and `component-model` —
+# into the build.
+component = [
+    "dep:wasmtime",
+    "dep:wasmtime-wasi",
+    "wasmtime-wasi/p3",
+    "dep:wasmtime-wasi-http",
+    "wasmtime-wasi-http/p3",
+    "dep:tokio",
+    "dep:http",
+    "dep:http-body-util",
+    "dep:http-body",
+    "dep:bytes",
+    "dep:nlipsy-http",
+    "cbor",
+]

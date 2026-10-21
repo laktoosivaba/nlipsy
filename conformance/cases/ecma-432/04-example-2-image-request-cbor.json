@@ -1,0 +1,34 @@
+{
+  "title": "Example 2: image processing request over CBOR",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§8 Example 2: image processing request (CBOR)",
+    "note": "composed from a verbatim example: as for Example 1, the message is printed as Python pseudo-code. The payload `b'\\xff\\xd8\\xff\\xe0...'` is composed as the four bytes it shows, ff d8 ff e0 (a JPEG SOI/APP0 header). The CBOR is produced by conformance/tools/cbor_encode.py from the same JSON description."
+  },
+  "wire": "cbor",
+  "input_hex": "a56b4d65737361676554797065675265717565737466466f726d61746662696e61727969537562666f726d61746a696d6167652f6a70656767436f6e74656e7444ffd8ffe06b5375626d6573736167657381a4654c6162656c6b6465736372697074696f6e66466f726d6174647465787469537562666f726d617462656e67436f6e74656e74781e50726f63657373207468697320696d61676520666f722064656665637473",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "binary",
+      "subformat": "image/jpeg",
+      "content": {
+        "$bytes": "/9j/4A=="
+      },
+      "submessages": [
+        {
+          "label": "description",
+          "format": "text",
+          "subformat": "en",
+          "content": "Process this image for defects"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Process this image for defects",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"binary\",\"subformat\":\"image/jpeg\",\"content\":\"/9j/4A==\",\"submessages\":[{\"label\":\"description\",\"format\":\"text\",\"subformat\":\"en\",\"content\":\"Process this image for defects\"}]}"
+  },
+  "notes": "§7.1 puts binary content in a CBOR byte string, so no base64 is involved on this wire; canonical_json spells the same bytes as padded base64, which is what §7.2's text fallback would have carried."
+}

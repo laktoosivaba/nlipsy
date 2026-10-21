@@ -1,0 +1,137 @@
+# cargo-deny configuration. Written against the 0.20 schema, which is also what
+# `EmbarkStudios/cargo-deny-action@v2` runs; the pre-0.16 severity keys under
+# `[advisories]` (`vulnerability`, `notice`) were removed and are now hard errors
+# in this file rather than warnings.
+#
+#   cargo deny check all
+
+[graph]
+# `cbor` is an optional feature, so ciborium only enters the dependency graph when
+# features are on. Checking the default graph would silently exempt the licences and
+# advisories of every optional dependency — the opposite of the point.
+all-features = true
+
+[advisories]
+# Vulnerabilities are unconditionally errors in this version; the only escape hatch
+# is an explicit entry in `ignore` below, which is the right shape — an exception
+# should be a line in this file with a reason next to it.
+ignore = []
+# Severity is no longer configurable, so scope is the remaining dial: `workspace`
+# checks the crates this workspace actually chose, not every transitive crate a
+# dependency dragged in. A deep transitive crate being declared unmaintained is
+# real information, but it is not something a pull request that did not introduce it
+# can fix, and CI that fails for reasons the author cannot act on gets ignored.
+unmaintained = "workspace"
+# A yanked version is usually a dependency that needs a bump, not a defect here.
+yanked = "warn"
+
+[licenses]
+# Minimal by construction: every entry is here because a crate in the lockfile needs
+# it, and nothing is listed in anticipation. Adding one is a deliberate act, which is
+# what makes the list worth reading.
+#
+#   MIT, Apache-2.0  — serde, serde_json, thiserror, base64, ciborium and the rest
+#   Unicode-3.0      — unicode-ident, whose expression is
+#                      `(MIT OR Apache-2.0) AND Unicode-3.0`, so the Unicode terms
+#                      apply on top of the choice rather than instead of it
+#
+# The four below all arrive with `nlipsy-http-client`'s one non-obvious dependency,
+# reqwest with `rustls`, and each is here because a crate in the lockfile states it —
+# `cargo deny check licenses` named every one:
+#
+#   ISC              — untrusted and rustls-webpki (the certificate path builder
+#                      under rustls), and half of aws-lc-rs's dual expression
+#   BSD-3-Clause     — subtle, the constant-time primitives rustls uses, and one
+#                      conjunct of aws-lc-sys's expression (vendored BoringSSL)
+#   CDLA-Permissive-2.0
+#                    — webpki-root-certs, which rustls-platform-verifier carries for
+#                      the targets that have no system trust store to ask. It is a
+#                      *data* licence and the data is Mozilla's root certificate list
+#
+# `nlipsy-http-client`'s **second** transport (its `hyper` feature, 2026-10-04) added no
+# entry either, and that is worth stating because it is a whole TLS stack arriving:
+# hyper, hyper-util and tokio-rustls are `MIT OR Apache-2.0` or
+# `Apache-2.0 OR ISC OR MIT`, all already a choice among the allowed. Two are not plain
+# choices and both are already covered for another crate's sake:
+#
+#   ring             — `Apache-2.0 AND ISC`, a conjunction, so both sets of terms apply
+#                      at once. It is the crypto provider the hyper transport names
+#                      instead of aws-lc-rs, and `untrusted` beneath it is plain ISC —
+#                      which is above for rustls-webpki, so neither needed a line. No
+#                      `[[licenses.clarify]]` is needed for it either: `cargo deny check
+#                      licenses` reads the expression from the manifest and finds both
+#                      conjuncts allowed
+#   CDLA-Permissive-2.0
+#                    — webpki-roots is now a *direct* dependency as well, under the
+#                      `hyper` feature: the same Mozilla root list as webpki-root-certs
+#                      above, under the same data licence, which is the trade that
+#                      transport makes on purpose. Promoting the licence from transitive
+#                      to direct changed nothing here
+#
+# aws-lc-rs / aws-lc-sys — the rustls crypto provider — need no entry of their own:
+# with ISC, Apache-2.0, MIT and BSD-3-Clause allowed, every conjunct of their
+# expressions is satisfied.
+#
+# `nlipsy-server`'s tree — axum, axum-core, hyper, hyper-util, tower, tower-layer,
+# tower-service, http-body-util, mio, mime, httpdate, matchit, uuid, tracing,
+# tracing-core, sync_wrapper — added **no** entry to this list, which is worth stating
+# because a whole HTTP framework arriving for free reads like an omission. Every one of
+# them is MIT, `MIT OR Apache-2.0`, or `Apache-2.0`, all already allowed. The one that
+# is not a plain choice is matchit, axum's router: its expression is
+# `MIT AND BSD-3-Clause` — a conjunction, so both sets of terms apply at once — and
+# BSD-3-Clause is above for a different crate's sake. That it happens to cover this one
+# too is luck, not design, and naming it here is what keeps the next reader from
+# assuming the entry was added for axum.
+#
+# httpdate is on that list and is now a *direct* dependency as well — `nlipsy-http`
+# reads the HTTP-date form of `Retry-After` with it (RFC 9110 §10.2.3). It is
+# `MIT OR Apache-2.0` with no dependencies of its own, so promoting it from transitive
+# to direct changed nothing here.
+# The last two arrive with the JavaScript package's two unpublished members —
+# `nlipsy-component`, the `wit-bindgen` guest of `wit/nlipsy.wit`, and
+# `nlipsy-conformance`'s `component` feature, which runs the corpus through the built
+# artefact in wasmtime. Neither member is published and neither is in any published
+# crate's dependency graph, but `[graph] all-features = true` above is what puts them in
+# this check, and that is the right way round: a licence this workspace's *build* depends
+# on is a licence this workspace depends on:
+#
+#   Apache-2.0 WITH LLVM-exception
+#                    — the Bytecode Alliance's tree: wit-bindgen and its wit-parser /
+#                      wit-component / wasm-encoder / wasmparser / wasm-metadata
+#                      dependencies, and wasmtime with cranelift, regalloc2, pulley and
+#                      the rest. It is Apache-2.0 with the LLVM exception, which *removes*
+#                      the patent-and-attribution condition for object-code redistribution
+#                      rather than adding one — the same terms LLVM and Rust's own
+#                      `compiler-builtins` ship under, and `Apache-2.0` is already allowed
+#   Zlib             — foldhash, the default hasher of hashbrown 0.17, which wit-parser
+#                      and wasmtime reach through `indexmap`. A permissive licence with no
+#                      notice requirement for binary distribution
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Unicode-3.0",
+  "ISC",
+  "BSD-3-Clause",
+  "CDLA-Permissive-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "Zlib",
+]
+exceptions = []
+
+[bans]
+# `warn`, not `deny`: two versions of a transitive crate is a cost (compile time,
+# binary size) rather than a fault, and it is usually resolved by someone else's
+# release. Worth seeing in the log; not worth blocking a merge.
+multiple-versions = "warn"
+# A wildcard version requirement is a fault, and one this workspace can always fix:
+# it makes the build unreproducible from the manifest alone.
+wildcards = "deny"
+highlight = "all"
+
+[sources]
+# crates.io and nothing else. A git dependency cannot be published to crates.io
+# anyway, so one appearing here is a mistake caught before `cargo publish` finds it.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

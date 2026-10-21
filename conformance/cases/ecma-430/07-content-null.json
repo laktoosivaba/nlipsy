@@ -1,0 +1,23 @@
+{
+  "title": "Content of JSON type null",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "Annex A, property Content",
+    "note": "composed: Annex A types Content as [\"string\", \"number\", \"object\", \"array\", \"boolean\", \"null\"]; this case pins the null member. The format is `generic` so that no rule of §5.3 constrains the content's shape and the case is about the decoder alone."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"generic\",\n  \"subformat\": \"nlipsy.conformance\",\n  \"content\": null\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "generic",
+      "subformat": "nlipsy.conformance",
+      "content": null
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"generic\",\"subformat\":\"nlipsy.conformance\",\"content\":null}"
+  },
+  "notes": "Annex A allows Content to be null, so a null decodes to a null value rather than to a missing field. Under `text` or `token` the same value is an Error from validate — see readings/33-content-null-text."
+}

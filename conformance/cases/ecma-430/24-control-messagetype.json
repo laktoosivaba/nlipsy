@@ -1,0 +1,23 @@
+{
+  "title": "Control message spelled as MessageType `control`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.1, §6.3",
+    "note": "composed: §5.1.1 reserves the MessageType value 'control'; TR/113 §10 recommends exactly this exchange (\"implement MessageType of 'Control' which can accept a text request such as 'Please share your data privacy policies'\")."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"control\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Please share your data privacy policies.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Please share your data privacy policies."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Please share your data privacy policies.",
+    "canonical_json": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please share your data privacy policies.\"}"
+  }
+}

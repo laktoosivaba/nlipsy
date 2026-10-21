@@ -1,0 +1,12 @@
+/target
+.DS_Store
+# The npm package's build output and its dependencies. `javascript/dist/` is `tsc`'s
+# emit plus jco's transpile copied beside it, `javascript/src/wasm/` is that transpile,
+# and `javascript/test/generated/` is the corpus bundled as a module — all three are
+# produced by `make check-js` and none of them is a source.
+/javascript/node_modules
+/javascript/dist
+/javascript/src/wasm
+/javascript/test/generated
+/javascript/.tsbuild-examples
+/javascript/*.tgz

@@ -1,0 +1,18 @@
+{
+  "title": "`messagetype` that is not a string",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.1 (\"Its value must be a string as defined by ECMA-404\")",
+    "note": "composed: negative case for §5.1.1."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": 7,\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "wrong-type",
+      "path": "$",
+      "field": "messagetype"
+    }
+  }
+}

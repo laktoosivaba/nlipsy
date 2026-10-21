@@ -1,0 +1,25 @@
+{
+  "title": "Content of JSON type object",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "Annex A, property Content",
+    "note": "composed: Annex A types Content as [\"string\", \"number\", \"object\", \"array\", \"boolean\", \"null\"]; this case pins the object member. The format is `generic` so that no rule of §5.3 constrains the content's shape and the case is about the decoder alone."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"generic\",\n  \"subformat\": \"nlipsy.conformance\",\n  \"content\": {\"depth\": 2, \"unit\": \"metre\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "generic",
+      "subformat": "nlipsy.conformance",
+      "content": {
+        "depth": 2,
+        "unit": "metre"
+      }
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"generic\",\"subformat\":\"nlipsy.conformance\",\"content\":{\"depth\":2,\"unit\":\"metre\"}}"
+  }
+}

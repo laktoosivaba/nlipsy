@@ -1,0 +1,36 @@
+{
+  "kind": "exchange",
+  "title": "A control request spelled as the reserved messagetype is answered in both spellings",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.3, 5.1.1",
+    "quote": "If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true."
+  },
+  "endpoint": {
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "No conversation content is retained."
+    }
+  },
+  "request": {
+    "messagetype": "control",
+    "format": "text",
+    "subformat": "english",
+    "content": "what is your privacy policy?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "messagetype": "control",
+      "control": true,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": []
+    },
+    "findings": []
+  },
+  "notes": "Two fields come back where the peer sent one, and that asymmetry is the reading. §6.3 names the boolean and only the boolean — \"must respond with a NLIP Message with control field set to true\" — so the boolean is set whichever spelling arrived; setting it is obeying the clause literally, not inventing a field. `messagetype` is then copied from the request rather than composed, so a peer that wrote `CONTROL` would be answered `CONTROL`: §5 makes the value case-insensitive, and rewriting it would be a change the peer can see and the standard did not ask for. The message-level pair is `ecma-430/24` and `/25`, and `readings/22` is where the two spellings disagree inside one message."
+}

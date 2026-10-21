@@ -1,0 +1,36 @@
+{
+  "title": "Token submessage with a subformat beginning with `authentication`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.2.2",
+    "note": "composed: §6.2.2 describes a submessage with format 'token' and subformat beginning with 'authentication' that carries credentials; the spelling of the token itself is opaque to the protocol and is composed."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"authentication_9.2.3.5\", \"content\": \"eyJhbGciOiJub25lIn0\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "authentication_9.2.3.5",
+          "content": "eyJhbGciOiJub25lIn0"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "tokens": [
+      {
+        "subformat": "authentication_9.2.3.5",
+        "content": "eyJhbGciOiJub25lIn0",
+        "kind": "authentication"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"authentication_9.2.3.5\",\"content\":\"eyJhbGciOiJub25lIn0\"}]}"
+  }
+}

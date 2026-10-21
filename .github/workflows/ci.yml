@@ -1,0 +1,387 @@
+# Continuous integration for the nlipsy workspace.
+#
+# Every job is deliberately one command over the whole workspace. A new member is then
+# covered from the day it appears rather than the day someone remembers to add it to a
+# list here. The exclusions in the file — nlipsy-http-client and nlipsy-server, in the
+# wasm32 job — name themselves and say why; a job that listed its members instead would
+# not have to. Two things break the rule, and both break it the same way: `--workspace`
+# reaches every member but not every *feature set*. `cargo test -p nlipsy-core` in the
+# test job is the core's feature-less build, which unification had stopped reaching,
+# and the whole `features` job is the facade's and the client binding's — seventeen
+# manifests a consumer might actually write, none of which `--all-features` can stand in
+# for, plus one gate that is not a build at all (`make check-mobile-graph`).
+#
+# A third thing breaks it, and it breaks it in the other direction: two members are
+# *excluded* from `--all-features` lines and named on lines of their own.
+# `nlipsy-component` is the `wit-bindgen` guest of `wit/nlipsy.wit` and has its own
+# `rust-version` (wit-bindgen 0.62 and edition 2024 are past 1.85), and
+# `nlipsy-conformance`'s `component` feature runs the corpus through the *built* wasm
+# artefact in wasmtime — which no `cargo check` produces, so a job that turned it on
+# would fail for want of a file. Both are covered by the `component` job instead, which
+# builds the artefact first. Every exclusion below says which of the two reasons it is.
+#
+# Actions are pinned to a major tag rather than a commit SHA: a workspace with no
+# secrets and nothing to exfiltrate does not buy enough from SHA pinning to pay for
+# the Dependabot churn it creates. `dtolnay/rust-toolchain` has no major tag at all —
+# its refs are `stable`, `nightly`, `master` and exact versions — so it is referenced
+# by the channel each job actually wants.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+  pull_request:
+
+# One run per ref. Pushing twice to a pull request should not leave the first build
+# occupying a runner to produce a result nobody will read.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      # No cache: formatting compiles nothing.
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      # `nlipsy-conformance` is named separately with `--features cbor`, which is
+      # `--all-features` minus `component`: that feature's lint pass needs a WebAssembly
+      # runtime and belongs to the `component` job.
+      - run: cargo clippy --workspace --all-targets --all-features --exclude nlipsy-conformance -- -D warnings
+      - run: cargo clippy -p nlipsy-conformance --all-targets --features cbor -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # A Windows-only failure is worth seeing even once Linux has already failed.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # `--exclude nlipsy-conformance` and the line after it: `--all-features` would turn
+      # on the `component` mode, whose test loads an artefact this job never built and
+      # would therefore fail for want of a file rather than for want of conformance. The
+      # `component` job runs that mode, with the artefact.
+      - run: cargo test --workspace --all-features --exclude nlipsy-conformance
+      - run: cargo test -p nlipsy-conformance --features cbor
+      # And again with no features at all. `cbor` is optional, so the default build
+      # is a different crate: a `#[cfg(feature = "cbor")]` item referenced from
+      # unconditional code compiles perfectly well under --all-features and not at
+      # all here. Only running both catches that.
+      - run: cargo test --workspace
+      # And the core on its own, because the line above stopped reaching its plain
+      # build: feature unification is per-invocation, and `nlipsy-http-client`'s
+      # dev-dependency asks for `client` and `testing`, so a workspace run compiles
+      # `nlipsy-core` with half its API on whatever the command line said. What a
+      # consumer writing `nlipsy-core = "0.1"` gets is this line and nothing else.
+      - run: cargo test -p nlipsy-core
+
+  features:
+    name: feature sets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The one job that is *not* one command over the whole workspace, and the
+      # exception has a reason. `nlipsy` is a facade: every module it has is behind a
+      # feature, the features nest, and `--all-features` — which every other job runs —
+      # can never catch a feature that forgets part of what it enables. `http-client`
+      # without `nlipsy-core/client` compiles perfectly under `--all-features`, because
+      # something else turned that on, and fails for the one consumer who wrote only
+      # `http-client`. Each line is a consumer's manifest. Three of them are *pairs*,
+      # because three modules are produced by more than one feature each —
+      # `nlipsy::core` by the `-core` pair, `nlipsy::http` by the bindings, and
+      # `nlipsy::http_client` by the client binding's two transport features — and a
+      # module written as two blocks instead of one `cfg(any(..))` fails on those lines
+      # and nowhere else. No `cargo-hack`: thirteen lines a reader can check against the
+      # manifest are worth more than a tool that hides which combinations were tried.
+      #
+      # The target carries two more things this job is the only place for.
+      # `nlipsy-http-client` has two transports behind two features, so the builds
+      # `--all-features` cannot reach are checked here: with neither (what a consumer
+      # who only replays a recording compiles), with hyper alone (what an Android or an
+      # iOS FFI build uses), and with both, where a `rustls` carrying two crypto
+      # providers at once is what `ClientConfig::builder_with_provider` exists to
+      # survive. And `make check-mobile-graph`, which is not a build: it reads
+      # `cargo tree --target aarch64-linux-android` and `--target aarch64-apple-ios` and
+      # fails if `jni`, `rustls-platform-verifier`, `aws-lc`, `cmake`,
+      # `security-framework`, `openssl` or `native-tls` is in the hyper transport's
+      # graph. That property is the whole reason the transport exists and nothing in the
+      # source can state it. `cargo tree --target` needs neither target installed nor an
+      # NDK nor Xcode, which is why it belongs on this plain ubuntu runner; *compiling*
+      # for those targets is the FFI crate's job on a machine that has both.
+      - run: make check-features
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The MSRV is declared once, in `[workspace.package]`, and read back from there.
+      # `cargo metadata | jq '.packages[0].rust_version'` would work today but answers
+      # a different question — the first *member's* effective rust-version, which is
+      # whichever member sorts first once there are two, and which a member may
+      # override. Reading the workspace table is the same fact the manifest states,
+      # and it needs no toolchain installed, so it can run before the install step.
+      - id: msrv
+        run: |
+          version=$(sed -n '/^\[workspace\.package\]/,/^\[/ s/^rust-version *= *"\([^"]*\)".*/\1/p' Cargo.toml)
+          test -n "$version" || { echo "no rust-version in [workspace.package]"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "MSRV is $version"
+      # `@master` because the toolchain is not known until the step above has run;
+      # the tag-shaped refs of this action name a fixed channel.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@v2
+      # `check`, not `test`: the MSRV promise is that the crate compiles on that
+      # toolchain, and dev-dependencies of the test harness are not part of it.
+      #
+      # Three exclusions, and none weakens the promise, because the promise is about the
+      # six *published* crates. `nlipsy-component` and `examples/echo-endpoint` declare
+      # their own `rust-version`: wit-bindgen 0.62 and edition 2024 are past 1.85, nothing
+      # published depends on either, and their floor is therefore not a promise to anyone;
+      # each manifest says the same at its `rust-version`. `nlipsy-conformance` is excluded
+      # from the `--all-features` line alone and checked on the next one with
+      # `--features cbor`, because its `component` feature pulls wasmtime, whose own MSRV
+      # is well past this toolchain.
+      - run: cargo check --workspace --all-targets --all-features --exclude nlipsy-component --exclude nlipsy-conformance --exclude echo-endpoint
+      - run: cargo check -p nlipsy-conformance --all-targets --features cbor
+      # And the client binding's hyper transport without reqwest beside it, because the
+      # line above compiles both and the FFI build compiles only this one. The floor is
+      # hyper-rustls's own 1.85; everything else in that graph is below it (hyper 1.63,
+      # hyper-util 1.64, rustls 1.71, webpki-roots 1.70, ring 1.66, http-body-util 1.61),
+      # so the promise this job makes is the same promise for that build too — checked
+      # rather than inferred from the manifests.
+      - run: cargo check -p nlipsy-http-client --all-targets --no-default-features --features hyper
+
+  docs:
+    name: rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Nightly, and `--cfg docsrs`, to build the crate the way docs.rs does:
+      # `doc_cfg` is a nightly feature, and the `#[cfg_attr(docsrs, doc(cfg(...)))]`
+      # attributes that mark feature-gated items are inert without the cfg. A broken
+      # intra-doc link should fail here rather than on docs.rs after publication.
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings --cfg docsrs
+
+  wasm:
+    name: wasm32
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-unknown-unknown
+      # A JavaScript package is meant to build on the message model and the runtime
+      # core, so wasm-cleanliness is a promise and not a coincidence. It breaks
+      # quietly — one dependency that reaches for the clock, the filesystem or a
+      # thread is enough — which is exactly the kind of regression a check catches and
+      # review does not.
+      #
+      # `nlipsy-http` is covered rather than excluded, and that is half the reason it
+      # is a crate: ECMA-431 §6 as values — the status map, the header spellings, both
+      # directions of `Retry-After` — has no socket and no clock in it, and it is what a
+      # JavaScript `fetch` handler over the same engine needs.
+      #
+      # The two exclusions state the promise precisely rather than weakening it. Both
+      # members are *native* HTTP bindings. reqwest on this target is the fetch
+      # backend, a different client with no `connect_timeout` and no `is_connect` — the
+      # two things the client binding's contract is written in terms of — so it does not
+      # compile here, and making it compile would ship a transport that keeps neither
+      # promise. `nlipsy-server` is axum over hyper over tokio: an accept loop and a
+      # socket, which a browser has nothing to point at. A browser reaches the core
+      # through `fetch` and its own HTTP framework instead, which is why the layer seam
+      # and the dispatcher are in `nlipsy-core`.
+      #
+      # `nlipsy` is excluded from that line and checked on the next one instead, because
+      # `--all-features` on a facade means `full`, and `full` means both of the crates
+      # above. The second line names every facade feature whose crate compiles here —
+      # which is what a consumer reaching the core from a browser would actually ask for
+      # — so the promise is checked rather than skipped. It cannot reach `nlipsy::http`,
+      # whose two features are the two bindings; the crate underneath that module is
+      # covered by the line above.
+      # Two more exclusions than the two above, both of them targets rather than
+      # promises. `nlipsy-component` is a `cdylib` for `wasm32-wasip3`, where the
+      # component model and WASI exist; on `wasm32-unknown-unknown` it would be a bare
+      # core module with dangling imports, which says nothing about anything. And
+      # `nlipsy-conformance` is named on its own line with `--features cbor`, because
+      # `--all-features` would ask a WebAssembly runtime to compile *for* WebAssembly.
+      - run: cargo check --workspace --all-features --exclude nlipsy-http-client --exclude nlipsy-server --exclude nlipsy --exclude nlipsy-component --exclude nlipsy-conformance --target wasm32-unknown-unknown
+      - run: cargo check -p nlipsy-conformance --features cbor --target wasm32-unknown-unknown
+      - run: cargo check -p nlipsy --no-default-features --features client-core,server-core,cbor --target wasm32-unknown-unknown
+
+  component:
+    name: component
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Two toolchains, and the first one is the new part. The *artefact* is built for
+      # `wasm32-wasip3`, whose `rust-std` ships on nightly until Rust 1.100 makes the
+      # target stable (2026-11-12); the corpus host, clippy and the tests stay stable's.
+      # The nightly is pinned to the same date the `Makefile`'s `COMPONENT_TOOLCHAIN`
+      # defaults to, so the two cannot drift apart, and `make check-component` reaches it
+      # by name with `cargo +…`. On 2026-11-12 both become `stable` and this step goes.
+      #
+      # Nightly **first**: `dtolnay/rust-toolchain` makes the toolchain it installed the
+      # default, so the last one to run is what a bare `cargo` picks — and that has to be
+      # stable, since only one line of `check-component` wants the nightly.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-15
+          targets: wasm32-wasip3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # `cargo install` rather than `bytecodealliance/actions/wasm-tools/setup@v1`: the
+      # action's input names are not something this workflow can cite from memory, and a
+      # `--locked` install of a tool that is already in this job's cargo cache is cheap.
+      # It is the same command `wit/README.md` §2 tells a contributor to run.
+      - run: cargo install wasm-tools --locked
+      # And the composer, for the same reason and by the same route: `check-component`
+      # now also builds `examples/echo-endpoint` and plugs it into the engine, so that
+      # the artefact a runtime serves on its own is built by the same target that
+      # checks the engine. `wac plug` is the one command it takes.
+      - run: cargo install wac-cli --locked
+      # The contract first: the file parses and the world resolves. It is cheap, it needs
+      # only the tool above, and a failure here explains every failure below it.
+      - run: make check-wit
+      # Then the guest: build on the pinned nightly, validate, read the world back —
+      # which is also what shows the imports are WASI 0.3 and nothing else — compose it
+      # with `examples/echo-endpoint`, and run the 125 cases of `conformance/` through
+      # the artefact in wasmtime, linked with `wasmtime_wasi::p3` and
+      # `wasmtime_wasi_http::p3`, beside the HTTP-level tests through
+      # `wasi:http/handler` and two requests through the composition. The proof of the
+      # component that needs no JavaScript at all.
+      - run: make check-component
+      # Informational only. The artefact has no size budget; the number is printed so
+      # that a jump in its size is noticed in a log rather than discovered by a
+      # consumer.
+      - name: artefact size
+        run: |
+          artefact=target/wasm32-wasip3/component/nlipsy_component.wasm
+          composed=target/wasm32-wasip3/component/nlipsy_echo.wasm
+          ls -l "$artefact" "$composed"
+          echo "raw bytes: $(wc -c < "$artefact")"
+          echo "composed raw bytes: $(wc -c < "$composed")"
+
+  javascript:
+    name: javascript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The same two toolchains as the `component` job, in the same order and for the
+      # same reason: the *artefact* is built for `wasm32-wasip3`, whose `rust-std` ships
+      # on nightly until Rust 1.100 makes the target stable (2026-11-12), and the nightly
+      # is pinned to the date the `Makefile`'s `COMPONENT_TOOLCHAIN` defaults to so the
+      # two cannot drift. Nightly first, so that a bare `cargo` picks stable.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-15
+          targets: wasm32-wasip3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Node 26 is the floor the package declares: jco's glue for this component uses
+      # JSPI (`WebAssembly.Suspending`), and the package is ESM-only because the
+      # component is instantiated by a top-level `await`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: javascript/package-lock.json
+      # Bun runs the corpus through the package too, and `test/node/bun.test.mjs` is the
+      # test that says so. Without it that one suite skips with its reason printed, which
+      # is a weaker gate than the one this workflow can afford.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4'
+      # `make check-js` builds the component with the pinned nightly (through `make
+      # component`), transpiles it with jco, compiles the wrapper, type-checks the
+      # examples against the package's own `exports`, runs the glue's suites and all 125
+      # conformance cases in Node and in Bun, and packs the tarball dry. The three seams
+      # jco cannot run are `make check-js-e2e`, which is red by design and is not here.
+      - run: make check-js
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Licences, advisories, banned crates and sources: see deny.toml.
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check all
+
+  machete:
+    name: unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@cargo-machete
+      # Reads manifests and sources; no build, so no toolchain or cache needed.
+      - run: cargo machete
+
+  semver:
+    name: semver
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # The baseline is the newest version on crates.io, and there is none yet, so
+    # this can only fail for want of something to compare against.
+    # TODO: remove `continue-on-error` once 0.1.2 is published.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      # Every publishable member is checked with no `package` input — today
+      # `nlipsy-protocol`, `nlipsy-core`, `nlipsy-http`, `nlipsy-http-client`,
+      # `nlipsy-server` and `nlipsy`; `nlipsy-conformance` is `publish = false` and is
+      # skipped for us.
+      #
+      # `feature-group` is what the facade makes necessary. The default is
+      # cargo-semver-checks' own heuristic over a crate's *default* features, and
+      # `nlipsy` has none on purpose: its entire public API is behind `protocol`,
+      # `cbor` and `full`, so the checked API would be the empty one and every
+      # breaking change to a re-export would pass. `--all-features` is also what
+      # clippy, the tests, rustdoc and the wasm check run with, so one feature set
+      # governs the whole workflow.
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          feature-group: all-features
+
+  typos:
+    name: typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1

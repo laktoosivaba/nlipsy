@@ -1,0 +1,54 @@
+{
+  "kind": "exchange",
+  "title": "A reply a layer answered still confirms the token the end-point has already issued",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.1",
+    "quote": "Either the client agent or the server agent may be the first one to create a submessage with format field of 'token' and the subformat field starting with 'conversation'. ... The intent is to maintain the concept of a continuous conversation among the two agents."
+  },
+  "endpoint": {
+    "short_circuit": true,
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "own": [
+        "srv-1"
+      ],
+      "issued": {
+        "conversation": "srv-1"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Served from the cache."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "And what does TC56 do?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation",
+        "content": "srv-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation",
+          "content": "srv-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "`ecma-430/30`'s pair of halves — §6.2's exception takes the end-point's own token out of the echo, §6.2.1's confirmation puts it back exactly once — read on a reply no handler produced. The reading is `readings/51`'s: the obligation is about the reply the peer receives, so a layer that answers on its own owes the confirmation a handler would have owed, and a peer whose conversation is served from a cache must not see the identifier it is holding disappear for a turn. `ecma-430/31` is the same assertion on the ordinary path and the two must agree; that they do is what says the confirmation is in the idempotent half of clause 6 (`Conformity::close`) rather than in the step that finishes a handler's answer."
+}

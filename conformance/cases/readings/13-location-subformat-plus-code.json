@@ -1,0 +1,28 @@
+{
+  "title": "Location subformat that is neither text nor GPS",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `location`)",
+    "note": "composed: Table 1 gives `text` and `GPS`; an Open Location Code is a third thing that end-points do use. Warning, because the location is still usable."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"location\",\n  \"subformat\": \"plus-code\",\n  \"content\": \"8FVC9G8V+R9\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "location",
+      "subformat": "plus-code",
+      "content": "8FVC9G8V+R9"
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/location-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"location\",\"subformat\":\"plus-code\",\"content\":\"8FVC9G8V+R9\"}"
+  }
+}

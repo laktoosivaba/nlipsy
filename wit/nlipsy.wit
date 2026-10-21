@@ -1,0 +1,1366 @@
+/// The language-neutral interface contract of the nlipsy engine.
+///
+/// `conformance/cases/` is the truth about *behaviour*; this file is the truth about
+/// the *interface*. Every item below cites the clause it implements and the Rust item
+/// in this workspace it is lifted from — `wit/README.md` holds the seed table in one
+/// place and the corpus table that shows every case field is expressible. Nothing may
+/// be exported here that has no seed.
+///
+/// The protocol lives in the component (`wit/README.md`, *The design*): it composes
+/// the host's layers over the host's handler, it carries the ECMA-431 §6 binding itself
+/// through `wasi:http/handler@0.3.0`, and it is the client too through
+/// `wasi:http/client@0.3.0`. What a host supplies is *code* — a handler, layers, a
+/// token authority, an alternative transport, somewhere to record — and nothing else.
+/// No resource crosses this boundary in either direction, so a host keeps whatever
+/// state it wants keyed on `types.context`'s `exchange` number and nothing is borrowed,
+/// lent or leaked.
+///
+/// Doc comments (`///`) are load-bearing: wit-bindgen copies them into the generated
+/// Rust. jco does **not** copy them into its `.d.ts` (`wit/README.md` §5, measured), so
+/// the npm package's `types.ts` restates them and cites this file.
+
+package nlipsy:engine@0.1.0;
+
+/// The message model and the clause-6 vocabulary, as plain values.
+///
+/// Declared in an interface of its own so that the five `host-*` interfaces (imported)
+/// and `engine` / `client` (exported) name the same records. It is *imported* by the
+/// world rather than exported, and that is not a choice: a world cannot export an
+/// interface that one of its imports depends on — `wasm-tools` rejects the world as one
+/// that "transitively depends on an interface in incompatible ways".
+/// Nothing is lost — `types` declares no functions, so it contributes no import to the
+/// instance, and jco still emits `interfaces/nlipsy-engine-types.d.ts` with every
+/// record and variant for the wrapper to re-export.
+interface types {
+  /// A JSON number, kept in three pieces so that `i64` and `u64` do not lose
+  /// precision through `f64`.
+  ///
+  /// ECMA-404's number space, as `serde_json::Number` already models it: an integer
+  /// that fits `i64` or `u64`, otherwise a finite double. NaN and the infinities are
+  /// not in it and cannot arrive — `Content::Number`
+  /// (`crates/nlipsy-protocol/src/content.rs:109`),
+  /// ECMA-432 §7.1 refuses them at the CBOR decoder.
+  variant number {
+    /// A signed integer — anything `i64` holds.
+    int(s64),
+    /// An unsigned integer above `i64::MAX`, e.g. the bignum of
+    /// `conformance/cases/ecma-432/12-cbor-bignum-content.json`.
+    uint(u64),
+    /// A finite double. Never NaN, never ±∞.
+    float(f64),
+  }
+
+  /// One content value — ECMA-430 §5.1.4, `crates/nlipsy-protocol/src/content.rs:109`.
+  ///
+  /// The seven variants of `Content` with the two recursive ones flattened: WIT has no
+  /// recursive types, so `Content::Array` and `Content::Object` cross as
+  /// `structured(string)`.
+  ///
+  /// **The `structured` boundary.** The string is the *canonical JSON text* of the
+  /// array or object — exactly what `Content::to_json_value`
+  /// (`crates/nlipsy-protocol/src/content.rs:201`) produces, which is the lossy
+  /// direction the crate already defines: a byte string nested inside structured
+  /// content becomes base64 text there, because JSON cannot hold it either. No corpus
+  /// case has nested bytes, and if one ever arrives the corpus needs a convention before
+  /// this contract does. Object keys are sorted, because
+  /// `Content::Object` is a `BTreeMap` and ECMA-404 makes an object unordered.
+  ///
+  /// Producing that string is the *host's* side of a private glue encoding, never a
+  /// user's: the wrapper builds it with `JSON.stringify` and the Rust corpus host with
+  /// `serde_json`. A string that is not JSON is therefore a host bug, and the engine's
+  /// defined answer is to read it as `text` content rather than to trap or to invent a
+  /// value — nothing is discarded and the bytes come back out of `encode` unchanged.
+  ///
+  /// **The numbers in that string are the engine's.** It is written by
+  /// `serde_json`, which holds an integer exactly, so a host reading it must not narrow
+  /// what it finds: a parser that lifts every number into a 64-bit float rounds a peer's
+  /// identifier with nothing anywhere saying so. The wrapper reads it with ES2025's
+  /// JSON source access and lifts an integer a `number` cannot hold into a `bigint`; a
+  /// host whose parser cannot do that must fail rather than round, because wrong data is
+  /// worse than none.
+  variant content {
+    /// JSON `null`, CBOR `null` — a *present* content whose value is null, which
+    /// Annex A allows and which an absent field is not.
+    null,
+    /// A boolean. `%bool` is the escape for WIT's keyword; the case is still named
+    /// `bool` and jco emits `{ tag: 'bool', val: boolean }`.
+    %bool(bool),
+    /// A number.
+    number(number),
+    /// A text string. Over the JSON wire a `binary` message's string is base64 and is
+    /// decoded into `bytes` instead.
+    text(string),
+    /// A byte string — ECMA-432 §7.1. `Uint8Array` in JavaScript. This is what the
+    /// corpus spells `{"$bytes": "<base64>"}`.
+    bytes(list<u8>),
+    /// An array or an object, as canonical JSON text. See the note above.
+    structured(string),
+  }
+
+  /// The six values of ECMA-430 Table 1 — `crates/nlipsy-protocol/src/message.rs:39`,
+  /// in the order the table lists them (`Format::ALL`, `:58`).
+  ///
+  /// A closed enum and not a `string`, because a string at this boundary admits a
+  /// value the model cannot hold and the guest would have nowhere to report it: a
+  /// `Format::parse` on a function with no error arm has to fall back to something,
+  /// silently. jco renders it as the string union
+  /// `'text' | 'token' | …`, so the JavaScript shape does not move. Casing is settled
+  /// before the boundary: §5 makes the value case-insensitive and `decode` lower-cases
+  /// it (`Format::parse`, `message.rs:84`).
+  enum format {
+    /// Natural language text; the subformat names the language.
+    text,
+    /// An opaque token interpreted by end-points; §6.2 reserves the `authentication`
+    /// and `conversation` subformat prefixes.
+    token,
+    /// Structured content: `json`, `uri`, `xml`, `html`, or a programming language.
+    structured,
+    /// Binary content; the subformat is `<content>/<encoding>`.
+    binary,
+    /// A location, as a text description or a GPS reading.
+    location,
+    /// A private extension agreed between two end-points.
+    generic,
+  }
+
+  /// One submessage of the `submessages` array — ECMA-430 §5.2,
+  /// `crates/nlipsy-protocol/src/message.rs:131`.
+  record submessage {
+    /// §5.2.1's optional label. Absent on most submessages.
+    label: option<string>,
+    /// §5.2.2.
+    format: format,
+    /// §5.2.3. Keeps the casing it arrived in: §5 makes the *format* value
+    /// case-insensitive and says nothing that would let an implementation rewrite an
+    /// opaque token or a language tag.
+    subformat: string,
+    /// §5.2.4.
+    content: content,
+  }
+
+  /// One NLIP message — ECMA-430 §5.1,
+  /// `crates/nlipsy-protocol/src/message.rs:288`.
+  ///
+  /// The leading object §5 ¶2 calls "the first submessage" is spelled as the message's
+  /// own `format`/`subformat`/`content`/`label`, exactly as the Rust type spells it,
+  /// and is *not* an entry of `submessages`. That is why `first-submessage-token` and
+  /// `token-count` exist in `protocol`: a message whose first submessage is a token
+  /// carries one for §6.2's purposes and `submessages` cannot show it.
+  record message {
+    /// §5.1.1. `control` and `Error` are the two values the standard reserves;
+    /// anything else is the application's.
+    message-type: option<string>,
+    /// §6.3's boolean. A different spelling of the same idea as
+    /// `message-type: "control"`, and both are read — see `is-control`.
+    control: option<bool>,
+    /// A label on the first submessage. ECMA-430 does not define one; the reference
+    /// SDK emits it, so the model carries it.
+    label: option<string>,
+    /// §5.1.2 — the first submessage's format.
+    format: format,
+    /// §5.1.3 — the first submessage's subformat.
+    subformat: string,
+    /// §5.1.4 — the first submessage's content.
+    content: content,
+    /// §5.1.5. The order is significant and is preserved end to end.
+    submessages: list<submessage>,
+  }
+
+  /// Which encoding a message came from, or goes to —
+  /// `crates/nlipsy-protocol/src/content.rs:78`.
+  ///
+  /// The only thing it changes is how `binary` content is spelled, and a decoder
+  /// cannot tell the two apart from the document alone: a JSON string under
+  /// `format: "binary"` is base64, a CBOR text string under the same format is not.
+  /// Only the frame that carried it knows, which is why `decode` takes this rather
+  /// than guessing — ECMA-432 §7.2's text fallback stays the caller's choice.
+  enum wire {
+    /// UTF-8 JSON — ECMA-430's own representation and ECMA-432 §7.2's fallback.
+    /// Binary content is base64 text.
+    json,
+    /// CBOR — ECMA-432 §7.1. Binary content is a byte string and is never base64.
+    cbor,
+  }
+
+  /// What a document that cannot be decoded at all was wrong about.
+  ///
+  /// The corpus's fixed vocabulary — `conformance/README.md`, "Expectations" — as
+  /// `crates/conformance/src/lib.rs:289` (`describe`) maps `ParseError`
+  /// (`crates/nlipsy-protocol/src/error.rs:26`) onto it. It is the vocabulary rather
+  /// than the Rust variants because the corpus names what an implementation must
+  /// *distinguish*: ECMA-432 §7.1's "a frame carries one message and no more" is a
+  /// `cbor` failure here, not a kind of its own.
+  enum parse-error-kind {
+    /// The body is not JSON at all. `path` is always `$`.
+    invalid-json,
+    /// The frame is not CBOR, carries a value NLIP has no room for — a tag, a map key
+    /// that is not text, a non-finite float — or holds more than the single message
+    /// ECMA-432 §7.1 allows. `path` is always `$`.
+    cbor,
+    /// Valid JSON or CBOR, but the message or a submessage is not an object.
+    not-object,
+    /// A field §5.1.2–5.1.4 / §5.2.2–5.2.4 requires is absent, or present as `null`
+    /// where a string is required.
+    missing-field,
+    /// A field is present with a type the standard does not allow there.
+    wrong-type,
+    /// One field name arrived under two casings, which §5 makes one field with two
+    /// values and nothing says which wins.
+    duplicate-field,
+    /// `format` is not one of Table 1's six values.
+    unknown-format,
+    /// `binary` content on a JSON wire is not decodable base64 (§6.4).
+    base64,
+    /// A `ParseError` variant this version of the contract has no kind for. `ParseError`
+    /// is `#[non_exhaustive]`; a case the corpus cannot express is reported rather than
+    /// silently mapped onto a neighbour — the same answer `describe` gives.
+    unmapped,
+  }
+
+  /// A decode failure, in the three fields the corpus compares plus the prose.
+  ///
+  /// Exactly one is produced per document: decoding stops at the first thing it cannot
+  /// interpret.
+  record parse-error {
+    /// What was wrong.
+    kind: parse-error-kind,
+    /// Where in the document, as `ParseError::path`
+    /// (`crates/nlipsy-protocol/src/error.rs:249`) spells it: `$` for the first
+    /// submessage or the document as a whole, `submessages[i]` for the i-th
+    /// submessage, counted from zero.
+    path: string,
+    /// The field the kind is about, in the canonical lower-case spelling
+    /// (`subformat`, never `Subformat`), for the kinds that name one. `unknown-format`
+    /// always names `format` and `base64` always names `content`.
+    field: option<string>,
+    /// The `Display` text. Prose for a human; an implementation is not expected to
+    /// reproduce it, only the kind, the path and the field.
+    detail: string,
+  }
+
+  /// How badly a semantic rule of clause 5 was broken —
+  /// `crates/nlipsy-protocol/src/error.rs:272`.
+  enum severity {
+    /// The message cannot be interpreted as written.
+    error,
+    /// The message is off-spec but usable, and a deployment decides what to do.
+    warning,
+  }
+
+  /// One clause-5 finding — `crates/nlipsy-protocol/src/error.rs:299`.
+  ///
+  /// A finding, not a failure: the message decoded. What happens to it is
+  /// `disposition`'s question.
+  record violation {
+    /// `error` or `warning`.
+    severity: severity,
+    /// Where in the message, as `parse-error.path` spells it.
+    path: string,
+    /// The stable rule id — `conformance/README.md`, "Rule ids". Asserted by the
+    /// corpus without matching prose, which is what makes it stable.
+    rule: string,
+    /// The prose. Not part of any expectation.
+    detail: string,
+  }
+
+  /// What a clause-5 finding *does* to an exchange —
+  /// `crates/nlipsy-core/src/conformity.rs:138`.
+  ///
+  /// Not in ECMA-430: the standard states the rules and says nothing about the
+  /// consequence, so this is the deployment's choice and travels as configuration.
+  enum disposition {
+    /// Refuse the exchange. Inbound a rejected request; outbound a reply replaced by
+    /// a protocol-legal error.
+    reject,
+    /// Carry on, and hand the finding back so the host can record it.
+    log,
+    /// Carry on, and say nothing. The finding does not appear in `served.findings`.
+    ignore,
+  }
+
+  /// One finding and what the policy decided about it —
+  /// `crates/nlipsy-core/src/conformity.rs:246`.
+  record finding {
+    /// What the message model said.
+    violation: violation,
+    /// What `rejection` said to do about it.
+    disposition: disposition,
+  }
+
+  /// How many token submessages arrived, and how many were allowed —
+  /// `Rejected::TooManyTokens` (`crates/nlipsy-core/src/conformity.rs:334`).
+  ///
+  /// The two field names are the seed's own. `count` is how many token submessages the
+  /// request carried, the first submessage included — the number
+  /// `protocol.token-count` reports for it — and `limit` is the ceiling it exceeded,
+  /// which is `config.max-tokens-per-message`.
+  ///
+  /// A record rather than a positional `tuple<u32, u32>`: two counts of the same type in
+  /// a fixed order are what a
+  /// caller reads the wrong way round, and a tuple carries no names to read: jco
+  /// renders one as `[number, number]`, where the record is `{ count, limit }`.
+  record token-ceiling {
+    /// Token submessages the request carried, the first submessage included.
+    count: u32,
+    /// The ceiling it exceeded — `config.max-tokens-per-message`.
+    limit: u32,
+  }
+
+  /// A request that cannot be answered conformingly —
+  /// `crates/nlipsy-core/src/conformity.rs:325`.
+  ///
+  /// Both cases describe the *peer's* message rather than the end-point's state, which
+  /// is why the text of either is safe to hand back to the peer.
+  variant rejected {
+    /// The message broke clause 5 under a policy that rejects. Non-empty, and in the
+    /// order the model reported them.
+    violations(list<violation>),
+    /// More token submessages than the end-point will echo — how many the message
+    /// carried and the ceiling it exceeded are the two fields of `token-ceiling`.
+    ///
+    /// This engine's one deliberate departure from §6.2 ¶2, taken under ECMA-434
+    /// §7.2.5 rather than under clause 6: the reply carries no echo, because echoing
+    /// what was refused is the work the ceiling exists to refuse.
+    too-many-tokens(token-ceiling),
+  }
+
+  /// A reply that has been through `engine.finish` —
+  /// `crates/nlipsy-core/src/conformity.rs:359`.
+  ///
+  /// It is what `engine.finish` returns, and nothing else produces one: no import hands a
+  /// `finished` back, so there is no way for a host to present a reply that skipped the
+  /// step.
+  /// The host's `answer` returns a `message`, and the composed order of `engine.serve`
+  /// is what runs `finish` under the layers.
+  record finished {
+    /// What goes on the wire.
+    message: message,
+    /// What clause 5 said about the end-point's own reply, and what was done about it.
+    findings: list<finding>,
+    /// `true` when clause 5 rejected the end-point's own answer and `message` is the
+    /// replacement rather than the answer — `Finished::withheld`
+    /// (`crates/nlipsy-core/src/conformity.rs:374`), which derives it from `findings`.
+    /// Carried as a field because the boundary has no methods; it is the value the
+    /// engine's own `finish` computed and no caller supplies one.
+    withheld: bool,
+  }
+
+  /// Which of ECMA-430's two reserved token kinds —
+  /// `crates/nlipsy-core/src/token.rs:27`.
+  ///
+  /// Exhaustive: §5.3 reserves `authentication` and `conversation` and §6.2 leaves
+  /// every other subformat to the application, so a third case would be a token this
+  /// engine has no rule about.
+  enum token-kind {
+    /// §6.2.1 — the identifier that makes a sequence of requests one conversation.
+    conversation,
+    /// §6.2.2 — the credential returned unmodified so authentication is seamless.
+    authentication,
+  }
+
+  /// What a runtime knows about one exchange, and hands to everything below it —
+  /// `Context` (`crates/nlipsy-core/src/context.rs:27`), **by value**.
+  ///
+  /// A record and not a host resource: the host gets an `exchange` number and the guest
+  /// keeps nothing, so nothing is borrowed, nothing leaks, no constructor crosses and the
+  /// guest needs no `unsafe` to carry a handle across an `await`. A resource here would
+  /// also let a layer hand the next step a context that is not the one `serve` was
+  /// given, and split one exchange between two; a value cannot be substituted.
+  ///
+  /// The same value reaches every host callback of one exchange, so an authority, a
+  /// layer and a handler are looking at one context and cannot be handed a substituted
+  /// one: there is nothing to substitute.
+  record context {
+    /// An opaque label for whoever is on the other end. Opaque on purpose: a label is
+    /// all the protocol has any use for.
+    ///
+    /// An HTTP binding fills it when its runtime gives it one, and they differ: the axum
+    /// binding has the peer's address and uses it without the port (`Peer::label`,
+    /// `crates/nlipsy-server/src/server.rs:318`), while `wasi:http@0.3.0` carries no
+    /// remote address at all, so the guest's binding answers `none`. A host must
+    /// therefore read `none` as **"this binding does not know"** and never as "there is
+    /// no peer": a layer that throttles or audits by peer and finds `none` is under a
+    /// binding that cannot supply one, and a deployment behind a proxy reads a forwarded
+    /// header in a layer of its own.
+    peer: option<string>,
+    /// The identifier for this one request/response pair. Normative over AMQP
+    /// (ECMA-433 §6.1.4) and a convention over HTTP (`x-nlip-correlator`,
+    /// `crates/nlipsy-http/src/binding.rs:37`), which is exactly why it lives here
+    /// rather than in a transport signature.
+    correlator: option<string>,
+    /// The number that names this exchange, for a host that keeps state about one.
+    ///
+    /// It replaces the `extensions` map of the seed, which is a Rust type map and
+    /// cannot cross a boundary: a host keys its session, its deadline or its
+    /// authenticated principal on this number and reads it back in its authority, its
+    /// layers and its handler.
+    ///
+    /// **`0` means "no exchange named".** A caller passing a context *into* `engine` or
+    /// `client` may leave it `0`, and the guest then mints one for the call; any other
+    /// value is the caller's and travels unchanged to every callback, which is what
+    /// lets a host drive `check` and `finish` as two steps of *one* exchange. The
+    /// number the guest mints is a per-instance counter and identifies an exchange
+    /// **within one instance only** — it is not a correlator and is never on a wire.
+    exchange: u64,
+  }
+
+  /// What a layer's `before` half answers with — the boundary-crossable split of
+  /// `Middleware` and `Next` (`crates/nlipsy-core/src/middleware.rs:90`, `:139`).
+  ///
+  /// A Rust layer is one "around" call that receives `next` and chooses whether to run
+  /// it. A `next` cannot cross this boundary — it would be a type an export defines
+  /// appearing in the signature of an import — so the shape is split in two, and this
+  /// is what the way *in* returns: the request to hand down, or the reply to answer
+  /// with in the handler's place.
+  variant layer-step {
+    /// Carry on into the rest of the stack with this request. A layer that changed
+    /// nothing passes the request it was given back.
+    pass(message),
+    /// Answer here. The handler and every layer below this one are not run, and this
+    /// layer's own `after` is not called either — it has its reply already. The layers
+    /// *above* still unwind, and the guest still runs clause 6's idempotent half over
+    /// the result (`conformance/README.md`, "A short-circuited reply").
+    answer(message),
+  }
+
+  /// What an end-point does about the optional parts of clause 6 —
+  /// `ConformityConfig` (`crates/nlipsy-core/src/conformity.rs:79`).
+  /// `engine.default-config` is its `Default` (`:92`), which is what the corpus's
+  /// `endpoint.config` block omits.
+  record config {
+    /// §6.2.1 — issue a `conversation` token and keep confirming it. Off by default:
+    /// §6.2's echo is the only mandatory half of the clause.
+    issue-conversation-token: bool,
+    /// §6.2.2 — issue an `authentication` token on the first request.
+    issue-authentication-token: bool,
+    /// Upper bound on the token submessages one request may carry, first submessage
+    /// included. Exceeding it refuses the request rather than truncating the echo —
+    /// see `rejected.too-many-tokens`. 32 by default —
+    /// `DEFAULT_MAX_TOKENS_PER_MESSAGE` (`crates/nlipsy-core/src/conformity.rs:70`).
+    max-tokens-per-message: u32,
+  }
+
+  /// What each severity does, in one direction —
+  /// `crates/nlipsy-core/src/conformity.rs:166`. Default `reject` / `log` (`:177`).
+  record policy {
+    /// What to do with a finding the message model calls fatal.
+    on-error: disposition,
+    /// What to do with a finding the model calls off-spec but interpretable.
+    on-warning: disposition,
+  }
+
+  /// The two directions' policies — `crates/nlipsy-core/src/conformity.rs:224`.
+  ///
+  /// Two rather than one, because an end-point that tolerates a peer's warnings has no
+  /// reason to tolerate its own.
+  record rejection {
+    /// Applied to the peer's request, before the end-point sees it.
+    inbound: policy,
+    /// Applied to the end-point's own reply, before it reaches the wire.
+    outbound: policy,
+  }
+
+  /// The status codes this binding answers with —
+  /// `crates/nlipsy-http/src/status.rs:37`.
+  ///
+  /// The binding is in the guest, so the map is *configuration* rather than a value a
+  /// host reads to write a status line itself: a field of `http-options`, read out of the
+  /// host's `host-endpoint.http-binding` once per request and applied by
+  /// `wasi:http/handler`.
+  ///
+  /// `200` is **not** a field. Every code here names a way to fail, and a deployment
+  /// that wants `201` for a success has left ECMA-431 §6 behind in a way one number
+  /// cannot express.
+  record status-map {
+    /// The bytes were not an NLIP message at all — `outcome.malformed`. `400`.
+    malformed: u16,
+    /// The message was refused before the end-point saw it — `outcome.refused`. `400`.
+    refused: u16,
+    /// The body was larger than the end-point will read. `413`.
+    ///
+    /// **Not reachable from an `outcome`, and cannot be**: the limit is enforced while
+    /// the body is read, before there are bytes to decode, so the binding names this
+    /// code itself and pairs it with `too-large`'s message body.
+    too-large: u16,
+    /// `endpoint-error.unsupported` — never answerable as written. `501`.
+    unsupported: u16,
+    /// `endpoint-error.unavailable`. `503`, with `Retry-After` when the error named a
+    /// delay (`retry_after_value`, `crates/nlipsy-http/src/retry.rs:26`).
+    unavailable: u16,
+    /// `endpoint-error.timed-out`. `504` rather than `408`: the peer sent its request
+    /// promptly and it is this end-point that failed to finish.
+    timed-out: u16,
+    /// `endpoint-error.internal`. `500`.
+    internal: u16,
+    /// The end-point's own reply broke clause 5 and was replaced — `served.withheld`.
+    /// `500`, and a field of its own so that a deployment relaying from an end-point it
+    /// does not control can tell the two apart in its logs.
+    withheld: u16,
+    /// An `outcome` or `endpoint-error` case this version of the binding has no arm
+    /// for. `500` — the end-point produced something its own binding could not
+    /// classify, which is not the peer's fault.
+    other: u16,
+  }
+
+  /// What a cross-origin caller is allowed, when a deployment allows one at all.
+  ///
+  /// **The one item in this contract with no Rust seed**, and it is recorded as the
+  /// binding's own, the way the `405`'s `Allow: POST` header is: `nlipsy-server` serves
+  /// no browser and has no CORS, ECMA-431 §6 names nothing of the kind, and the rule
+  /// below is the binding's.
+  ///
+  /// **The rule.** No cross-origin header at all is emitted unless the request carried
+  /// an `Origin` and that origin matches. A `*` beside
+  /// `Access-Control-Allow-Credentials: true` is a pair no browser accepts, and a
+  /// deployment reading its own responses in `curl` should never see one.
+  record cors {
+    /// The origins allowed, each as a full origin (`https://example.com`). A single
+    /// `*` allows any origin that sends one; it is still never emitted for a request
+    /// that sent no `Origin`.
+    origins: list<string>,
+    /// Whether `Access-Control-Allow-Credentials: true` goes on the reply. Only ever
+    /// beside a concrete origin, never beside `*`.
+    credentials: bool,
+  }
+
+  /// What the guest's ECMA-431 §6 binding does, as values — `ServerConfig`
+  /// (`crates/nlipsy-server/src/server.rs:122`), which is the axum binding's own
+  /// configuration and what this one is transposed from.
+  ///
+  /// Everything here is *protocol-adjacent*: the body limit, the correlator's spelling
+  /// and the status codes are what an ECMA-431 end-point has to decide and what a peer
+  /// can observe. Everything that is not — TLS, rate limits, tracing — belongs to
+  /// whatever serves the component. `engine.default-http-options` is the reference
+  /// server's answer to all four, so a host that changes nothing writes nothing.
+  record http-options {
+    /// Largest request body read, in bytes — `DEFAULT_MAX_REQUEST_BODY_SIZE`
+    /// (`crates/nlipsy-http/src/binding.rs:68`) by default.
+    ///
+    /// Enforced *while the body is read*, so that exceeding it is answered with
+    /// `too_large`'s message at `status.too-large` rather than with a framework's plain
+    /// text — and so that the bytes past the limit are never held.
+    max-request-body-size: u32,
+    /// Header the correlator travels in, or `none` to carry none —
+    /// `x-nlip-correlator` (`crates/nlipsy-http/src/binding.rs:37`) by default.
+    ///
+    /// The peer's value is reused when it is sane and one is minted otherwise; with
+    /// `none` no header is read and none is echoed, and `context.correlator` is still
+    /// filled, because an exchange that cannot be named in a log line is an exchange
+    /// nobody can investigate.
+    correlator-header: option<string>,
+    /// Cross-origin access, or `none` for an end-point no browser calls. Absent by
+    /// default, which is what `nlipsy-server` does.
+    cors: option<cors>,
+    /// What each refusal looks like on the status line.
+    status: status-map,
+  }
+
+  /// A dependency that is down or has asked for a delay —
+  /// `crates/nlipsy-core/src/endpoint.rs:143`, `EndpointError::Unavailable`.
+  record unavailable {
+    /// How long it asked to wait, in milliseconds, when it said so. Durations cross
+    /// this boundary as milliseconds throughout.
+    retry-after-ms: option<u64>,
+    /// Safe to show the peer.
+    detail: string,
+  }
+
+  /// Why an end-point — or a layer above it — could not answer —
+  /// `crates/nlipsy-core/src/endpoint.rs:143`.
+  ///
+  /// A JavaScript exception thrown by a user's handler is not one of these: the
+  /// wrapper catches it, maps it to `internal`, and surfaces it on the JavaScript side
+  /// as an `Error` whose `cause` is the original. Nothing traps.
+  variant endpoint-error {
+    /// The end-point will never answer this request as written. Retrying changes
+    /// nothing, which is what separates it from `unavailable`.
+    unsupported(string),
+    /// Something it depends on is down or asked it to slow down. Transient.
+    unavailable(unavailable),
+    /// A fault of this end-point's. The detail is for the log and never for the peer —
+    /// ECMA-434 §7.3.3, applied by `engine.public-message`.
+    internal(string),
+    /// The request was refused before the end-point saw it. Produced only by clause 6,
+    /// and separate from the three above because the peer's message is at fault rather
+    /// than the end-point — the difference between a 4xx and a 5xx.
+    refused(rejected),
+    /// The end-point did not answer inside the time a layer allowed it; the value is
+    /// the bound that was exceeded, in milliseconds. Data, not a clock: producing this
+    /// belongs to whatever holds the timer.
+    timed-out(u64),
+  }
+
+  /// How one exchange ended — `crates/nlipsy-core/src/serve.rs:64`.
+  ///
+  /// Every one of the four still produces a reply: `served.reply` is a message on all
+  /// of them, because a peer reading only the payload has to learn what happened.
+  variant outcome {
+    /// The end-point answered. Which does not mean clause 5 accepted the answer — see
+    /// `served.withheld`.
+    ok,
+    /// The bytes were not an NLIP message at all, so there was never a request.
+    malformed(parse-error),
+    /// The message was refused before the end-point saw it.
+    refused(rejected),
+    /// The end-point, or a layer above it, could not answer.
+    failed(endpoint-error),
+  }
+
+  /// What clause 6 still owes the peer on a reply a binding built itself —
+  /// `crates/nlipsy-core/src/serve.rs:145`.
+  ///
+  /// Three cases and not "a request or nothing", because the token ceiling is a third
+  /// kind of answer: a refusal that deliberately echoes nothing. `engine.owed-by` is
+  /// the rule that maps an `outcome` onto one of them, and `engine.error-reply` is what
+  /// applies it.
+  enum owed {
+    /// Nothing, because there was never a message: the bytes did not decode, so there
+    /// is no token to echo and no control-ness to read.
+    nothing,
+    /// Everything `close` discharges: §6.2's echo, §6.2.1's confirmation of what is
+    /// already issued, §6.3's carry. Every outcome but two — including `ok`, because
+    /// the success path runs the same rule.
+    clause6,
+    /// §6.3 alone, for `too-many-tokens`: echoing the tokens is exactly the work being
+    /// refused, so only the control boolean is carried.
+    control-only,
+  }
+
+  /// One exchange, answered — `crates/nlipsy-core/src/serve.rs:113`.
+  record served {
+    /// What goes back to the peer. A message on every outcome, refusals included.
+    reply: message,
+    /// How the exchange ended.
+    outcome: outcome,
+    /// `true` when clause 5 rejected the end-point's own answer and `reply` is the
+    /// replacement. It is not an `outcome` of its own, and deliberately: the layers
+    /// above saw a successful exchange, the session commits and a minted token is
+    /// persisted, all of which is right, because the peer's *request* was fine. Only
+    /// the binding's status line changes — `status-map.withheld` is the field it
+    /// changes to, for exactly that reason.
+    ///
+    /// It is what `engine.finish` reported about **the end-point's own answer**, and a
+    /// layer's `after` runs between that and the wire. So a layer that replaces a
+    /// withheld reply sends a good message at `status-map.withheld`, and one that breaks
+    /// clause 5 after `finish` saw a clean reply sends a bad message at `200` — the
+    /// deployment's bug either way, and the engine's own composer has the same shape.
+    withheld: bool,
+    /// What clause 5 said along the way — **one** list, the request's findings from
+    /// `engine.check` first, then the reply's from `engine.finish`, which is how
+    /// `Served::findings` concatenates them.
+    ///
+    /// The boundary between the two halves is not marked, and cannot be recovered from
+    /// this list. A caller that needs to attribute a finding to a direction — the
+    /// corpus's `expect.findings[].direction` does — drives `engine.check` and
+    /// `engine.finish` itself, which is what both `conformance/README.md`'s
+    /// language-neutral algorithm and the Rust runner do.
+    findings: list<finding>,
+  }
+
+  /// What an ECMA-431 binding knows about one exchange — the `Http` case of
+  /// `ExchangeDetail` (`crates/nlipsy-core/src/transport.rs:89`).
+  record http-detail {
+    /// The response status, as a number.
+    status: u16,
+    /// `Retry-After`, parsed into milliseconds — `parse_retry_after`
+    /// (`crates/nlipsy-http/src/retry.rs:49`). `some(0)` and `none` are different
+    /// answers: `none` means the end-point said nothing usable, and a caller that reads
+    /// it as zero will retry immediately against an end-point that never asked it to.
+    retry-after-ms: option<u64>,
+  }
+
+  /// What the binding knows about one exchange —
+  /// `crates/nlipsy-core/src/transport.rs:89`.
+  ///
+  /// One case today, on purpose: a WebSocket frame (ECMA-432) has neither a status nor
+  /// a `Retry-After`, and AMQP (ECMA-433) has neither, so each adds its own case when
+  /// it arrives rather than pretending to have a status.
+  variant exchange-detail {
+    /// ECMA-431.
+    http(http-detail),
+  }
+
+  /// What a transport carried back — `crates/nlipsy-core/src/transport.rs:55`.
+  record exchange {
+    /// The response body, as bytes.
+    body: list<u8>,
+    /// What the binding knows about it.
+    detail: exchange-detail,
+  }
+
+  /// Where a request was going and what the binding said about it — the payload the
+  /// two reaching cases of `TransportError` carry
+  /// (`crates/nlipsy-core/src/transport.rs:130`).
+  record transport-failure {
+    /// The end-point the request was going to. What a retry decision and a log line
+    /// name.
+    endpoint: string,
+    /// What the binding said.
+    detail: string,
+  }
+
+  /// Why an exchange did not produce a reply —
+  /// `crates/nlipsy-core/src/transport.rs:130`.
+  ///
+  /// The three differ in what a caller may safely do next, which is the whole reason
+  /// they are three.
+  variant transport-error {
+    /// The connection was never established, so the end-point cannot have seen the
+    /// request. Repeating it cannot duplicate anything.
+    unreachable(transport-failure),
+    /// The request went out and the reply never came back. Whether the end-point acted
+    /// on it is genuinely unknown; repeating risks the same turn twice in its
+    /// transcript.
+    interrupted(transport-failure),
+    /// A reply arrived and could not be read as the binding's framing at all. It names
+    /// no end-point because the failure is about the bytes.
+    malformed(string),
+  }
+
+  /// A reply body that is not an NLIP message — the `Opaque` case of `Body`
+  /// (`crates/nlipsy-core/src/transport.rs:240`).
+  ///
+  /// Kept rather than turned into an error, because an NLIP client has to *render* it:
+  /// over HTTP these bytes usually came from something in front of the end-point — a
+  /// proxy's HTML, a framework's plain text — and the user still has to see them.
+  record opaque {
+    /// The body, rendered for a reader and cut to 512 characters —
+    /// `OPAQUE_PREVIEW` (`crates/nlipsy-core/src/transport.rs:45`).
+    text: string,
+    /// Why it could not be read as a message.
+    why: string,
+  }
+
+  /// What the end-point sent back — `crates/nlipsy-core/src/transport.rs:240`.
+  variant body {
+    /// Bytes that decode as an NLIP message.
+    message(message),
+    /// Bytes that do not, with the reason.
+    opaque(opaque),
+  }
+
+  /// One reply, as the rest of a client consumes it —
+  /// `crates/nlipsy-core/src/transport.rs:272`.
+  ///
+  /// The derived views below are fields computed in Rust rather than methods,
+  /// so that the wrapper has no rule to port.
+  record reply {
+    /// What the binding knows about the exchange. `status` and the delay are read out
+    /// of this; a status in 200..300 is what "the end-point answered" means
+    /// (`ExchangeDetail::is_ok`, `crates/nlipsy-core/src/transport.rs:103`).
+    detail: exchange-detail,
+    /// How many bytes the body was, before anything was made of it. Not the decoded
+    /// length, which is measured after whitespace and escapes have been resolved.
+    bytes: u32,
+    /// The body, decoded if it could be.
+    body: body,
+    /// The text to show the user, whoever wrote it — `Reply::text`
+    /// (`crates/nlipsy-core/src/transport.rs:328`). Every `text` submessage in
+    /// document order, joined by spaces; for an opaque body, the preview. The language
+    /// filter is deliberately not applied: an end-point that answers in another
+    /// language is answering, not failing.
+    text: option<string>,
+    /// Every `token` submessage the reply carries, as it arrived — `Reply::tokens`
+    /// (`crates/nlipsy-core/src/transport.rs:363`).
+    ///
+    /// §6.2 ¶2 obliges an end-point that receives a token submessage to include "the
+    /// same submessage with the exact same format, subformat and content" in its
+    /// response. A client is an end-point and its next request is its response, so
+    /// **this is what goes out on that request** — before the caller removes the ones
+    /// it created itself, which is the clause's own exception and needs a memory this
+    /// contract does not have. It is also what a refusal still owes, where a conforming
+    /// end-point echoes and confirms without answering.
+    ///
+    /// The first submessage leads, then `body.message.submessages` in document order,
+    /// and a peer must not rely on that: §6.2 fixes no order and §6.2.1 lets the other
+    /// agent "optionally add another" conversation token, so two of them is the state
+    /// the clause describes. A `label` and a content that is not a string travel
+    /// verbatim.
+    ///
+    /// A field rather than something the wrapper derives, because of a rule: the *filter*
+    /// is a comparison on `format` and would be honest in JavaScript, but chaining
+    /// `protocol.first-submessage-token` in front of it is a **rule** — §5 ¶2 read
+    /// through §6.2 — and a wrapper that re-derived it would drop the token of a
+    /// message that *is* one (`conformance/cases/readings/36`).
+    tokens: list<submessage>,
+    /// The content of every conversation token the reply carries, in order —
+    /// `Reply::conversation_tokens` (`crates/nlipsy-core/src/transport.rs:386`),
+    /// derived from `tokens` above.
+    ///
+    /// §6.2.1's identifier as a **key**: what a caller files a transcript under, shows
+    /// on a status line, or compares against an identifier it minted itself. It is not
+    /// wire material — `tokens` is. A caller rebuilding a token from one of these
+    /// strings would choose a subformat and drop the label, and §6.2.1 gives the suffix
+    /// after `_` a meaning: the identity of the agent that created the conversation.
+    /// A token whose content is not a string has no entry here and is still in `tokens`.
+    conversation-tokens: list<string>,
+    /// The content of every authentication token the reply carries, in order —
+    /// `Reply::authentication_tokens` (`crates/nlipsy-core/src/transport.rs:399`),
+    /// derived from `tokens` on the same terms as `conversation-tokens`.
+    ///
+    /// §6.2.2 is the mandatory half of clause 6 — the other end-point "is obligated to
+    /// return the authentication token unmodified so that authentication can be
+    /// performed seamlessly" — and the obligation is this caller's, on its next
+    /// request. What discharges it is `tokens`; this is the key beside it, for a caller
+    /// that needs to notice a credential arriving or to tell two apart.
+    authentication-tokens: list<string>,
+    /// Whether the end-point marked the reply as an error in NLIP terms —
+    /// `Reply::is_error` (`crates/nlipsy-core/src/transport.rs:417`). A body that is
+    /// not a message counts as one: a caller must not be left believing an end-point
+    /// that never spoke NLIP said something in it.
+    is-error: bool,
+  }
+}
+
+/// ECMA-430 clause 5: the message model, as pure functions.
+///
+/// Nothing here has state, a clock or an end-point. It is what a corpus runner in any
+/// language needs to answer every *message* case, and what the wrapper's
+/// `encode`/`decode` path is.
+interface protocol {
+  use types.{message, wire, violation, submessage, parse-error, token-kind};
+
+  /// Decode one document — `Message::from_json_bytes`
+  /// (`crates/nlipsy-protocol/src/message.rs:469`) or `Message::from_cbor_slice`
+  /// (`:589`), chosen by `wire`.
+  ///
+  /// `wire` is a parameter and not a guess, so that ECMA-432 §7.2's text fallback stays
+  /// the caller's decision, as it is in Rust.
+  ///
+  /// Peer input cannot trap the component: this returns a `result`, and the error is a
+  /// structured `parse-error` rather than prose, because that is what
+  /// `conformance/cases/` asserts — the kind, the path and the field.
+  decode: func(bytes: list<u8>, wire: wire) -> result<message, parse-error>;
+
+  /// Encode one message — `Message::to_json_vec`
+  /// (`crates/nlipsy-protocol/src/message.rs:631`) or `Message::to_cbor_vec` (`:610`).
+  ///
+  /// No failure mode: a message's keys are strings and its numbers are finite, so
+  /// there is nothing a serializer can refuse. On the JSON wire the bytes are the
+  /// corpus's `canonical_json` exactly — fixed field order, sorted keys inside
+  /// structured content, padded base64, compact.
+  encode: func(message: message, wire: wire) -> list<u8>;
+
+  /// Apply clause 5's semantic rules — `Message::validate`
+  /// (`crates/nlipsy-protocol/src/message.rs:640`).
+  ///
+  /// Findings, not failures: the message decoded. The corpus compares these as a set
+  /// of `{rule, severity, path}`; the order is not part of any expectation.
+  validate: func(message: message) -> list<violation>;
+
+  /// `true` when `control` is `true` **or** `message-type` equals `control` ignoring
+  /// case — `Message::is_control` (`crates/nlipsy-protocol/src/message.rs:408`).
+  ///
+  /// ECMA-430 is inconsistent here: §5.1.1 reserves the *value* while §6.3 speaks of a
+  /// boolean *field*, and TR/113's figures send the boolean. Both are read and OR-ed.
+  /// It is also the rule `Dispatcher::route` (`crates/nlipsy-core/src/dispatch.rs:54`)
+  /// applies; the dispatcher itself is not exported, because the host that wants a
+  /// control/data split reads this and routes in its own `answer`.
+  is-control: func(message: message) -> bool;
+
+  /// All `text` content of the message in `language`, joined by single spaces in
+  /// document order — `Message::extract_text`
+  /// (`crates/nlipsy-protocol/src/message.rs:655`).
+  ///
+  /// The first submessage first when its format is `text`, then the `submessages`
+  /// array in the order it arrived, which §5.1.5 makes significant. `none` for
+  /// `language` collects every text subformat and is what the corpus's `expect.text`
+  /// asserts; `none` comes back when there is no text at all, which is not the same as
+  /// an empty string.
+  extract-text: func(message: message, language: option<string>) -> option<string>;
+
+  /// The message's *first* submessage as a `submessage`, when that submessage is a
+  /// token — `first_submessage_token`
+  /// (`crates/nlipsy-core/src/first_submessage.rs:28`).
+  ///
+  /// §5 ¶2 calls the leading object "the first submessage", so a message that *is* a
+  /// token carries one for §6.2's purposes. `message.submessages` cannot show it, which
+  /// is why this exists. The label travels with it: §6.2 ¶2 asks for "the same
+  /// submessage", and the copy is closer to the same with it than without.
+  first-submessage-token: func(message: message) -> option<submessage>;
+
+  /// How many `token` submessages a request carries, the first submessage included —
+  /// `token_count` (`crates/nlipsy-core/src/conformity.rs:51`).
+  ///
+  /// Counted rather than collected: it runs before the ceiling is applied, so a message
+  /// with a hundred thousand tokens must not cost a hundred thousand copies to refuse.
+  token-count: func(message: message) -> u32;
+
+  /// Which reserved kind a token submessage is, or `none` for the application's own —
+  /// `Submessage::is_conversation_token` / `is_authentication_token`
+  /// (`crates/nlipsy-protocol/src/message.rs:209` and `:204`).
+  ///
+  /// The subformat's *prefix*, matched case-insensitively: §5.3 reserves exactly two
+  /// and §6.2 says of every other that "the use of these tokens is up to the
+  /// application". `none` is the corpus's `"kind": "other"`. `authorization`, which the
+  /// reference Python SDK emits, is application-defined and answers `none` — echoed
+  /// like any other token, but not counted as a credential.
+  ///
+  /// It is a function rather than something the wrapper derives because it is a rule.
+  /// Which submessages are tokens at all is not: that is `format == token`, a
+  /// comparison on a field this contract already exposes.
+  token-kind-of: func(submessage: submessage) -> option<token-kind>;
+
+  /// The §6.4 out-of-band *request*: a `control` message asking for an upload target —
+  /// `Message::upload_request` (`crates/nlipsy-protocol/src/message.rs:368`).
+  upload-request: func(ask: string) -> message;
+
+  /// The §6.4 out-of-band *response* — `Message::upload_response`
+  /// (`crates/nlipsy-protocol/src/message.rs:384`).
+  ///
+  /// The shape is easy to build wrongly and is named once here rather than assembled at
+  /// every call site: a `control` message **containing a submessage** whose format is
+  /// `structured` and whose subformat is `uri`, not a bare `structured`/`uri` message.
+  /// `conformance/cases/ecma-430/27-out-of-band-response.json` records it.
+  upload-response: func(uri: string) -> message;
+}
+
+/// The deployment's handler, and the four values it configures the engine with —
+/// `Endpoint` (`crates/nlipsy-core/src/endpoint.rs:35`).
+///
+/// One of five imported interfaces, all of plain functions and none of them holding a
+/// resource. There is one end-point per component instance: a deployment that answers
+/// two kinds of request routes inside `answer`, which is what
+/// `Dispatcher::route` (`crates/nlipsy-core/src/dispatch.rs:54`) does in Rust and what
+/// `protocol.is-control` is exported for.
+///
+/// The four configuration functions are read once per exported call rather than held,
+/// which is what lets a `Conformity` be built per call and nothing in the guest outlive
+/// one. They must be cheap; a host that reads a file in one of
+/// them is reading it on every request.
+///
+/// **The names are not the types' names**, and cannot be: an interface has one
+/// namespace for its types and its functions, and `config`,
+/// `rejection` and `http-options` are all `use`d here. So the questions are named
+/// rather than the answers.
+interface host-endpoint {
+  use types.{config, context, endpoint-error, http-options, message, rejection};
+
+  /// A name for logs and for a dispatcher — `Endpoint::name`
+  /// (`crates/nlipsy-core/src/endpoint.rs:35`). Not a protocol value.
+  name: func() -> string;
+
+  /// The optional halves of clause 6 this end-point turns on — `ConformityConfig`
+  /// (`crates/nlipsy-core/src/conformity.rs:79`). `engine.default-config` is what a
+  /// host that has decided nothing returns.
+  conformity: func() -> config;
+
+  /// What a clause-5 finding does, inbound and outbound — `Rejection`
+  /// (`crates/nlipsy-core/src/conformity.rs:224`). `engine.default-rejection` is the
+  /// answer for a host that has decided nothing.
+  rejection-policy: func() -> rejection;
+
+  /// What the ECMA-431 §6 binding does — `ServerConfig`
+  /// (`crates/nlipsy-server/src/server.rs:122`). Read once per HTTP request by
+  /// `wasi:http/handler`; `engine.default-http-options` is the reference server's
+  /// answer.
+  http-binding: func() -> http-options;
+
+  /// The user's handler — `Endpoint::handle`
+  /// (`crates/nlipsy-core/src/endpoint.rs:52`).
+  ///
+  /// It returns a **message**, never a `finished`: finishing is the guest's, it happens
+  /// at the bottom of the composed layer stack because §6.2.1's token is minted there,
+  /// and there is no way for a host to hand back a reply that skipped it: no import
+  /// takes or returns a `finished`.
+  ///
+  /// `async`, because it is the user's code and the user's code waits for things. It is
+  /// called `answer` and not `handle` because wit-bindgen generates a
+  /// `#[doc(hidden)] fn handle(&self)` on every imported resource, and a method of the
+  /// same name collides with it; the word is kept the same on a free function so that
+  /// the contract does not disagree with itself.
+  answer: async func(request: message, cx: context) -> result<message, endpoint-error>;
+}
+
+/// The deployment's message-level layers — `Middleware` and `Next`
+/// (`crates/nlipsy-core/src/middleware.rs:90`, `:139`), split in two so that the seam
+/// can cross a boundary.
+///
+/// A Rust layer is one "around" call: it is handed `next` and decides whether to run
+/// it. `next` cannot cross — it is a type an export would have to define appearing in
+/// an import's signature — so each layer is addressed by **index** and answers two
+/// questions instead of one: `before` on the way in, `after` on the way out. The guest
+/// composes them into exactly the `Middleware` stack `nlipsy-core` runs, so the order
+/// is the engine's and not a host's: outermost first on the way in, innermost first on
+/// the way out, `finish` underneath all of them.
+///
+/// Indices are `0 .. count()`, outermost first, which is the order a host added them
+/// in. `count` is read once per exchange.
+interface host-layers {
+  use types.{context, endpoint-error, layer-step, message};
+
+  /// How many layers this deployment has. `0` is a deployment with none, which is what
+  /// a host that supplies no layers answers — WIT has no optional imports, so the
+  /// interface is implemented either way.
+  count: func() -> u32;
+
+  /// The way in. `pass` hands the request down, `answer` short-circuits: the handler
+  /// and every layer below are not run, this layer's own `after` is not called, and
+  /// the guest still runs clause 6's idempotent half over the reply —
+  /// `Conformity::close` (`crates/nlipsy-core/src/conformity.rs:514`), which `serve`
+  /// applies unconditionally.
+  ///
+  /// An `endpoint-error` refuses the exchange, exactly as a Rust layer that returns one
+  /// without calling `Next::run` does.
+  ///
+  /// A layer that **adds** a token to the request it passes down has that token echoed
+  /// by `finish`, because §6.2 ¶2 is about the request the end-point saw and `close` has
+  /// no rule that would take it back. So a reply may carry a token neither end-point
+  /// created, which ECMA-430 does not forbid and which a deployment writing layers
+  /// should know it is choosing.
+  before: async func(index: u32, request: message, cx: context) -> result<layer-step, endpoint-error>;
+
+  /// The way out, innermost first — and **after** `finish`, so a layer that persists
+  /// what §6.2.1 minted sees the reply that goes on the wire. That is the whole reason
+  /// `Tail` puts `finish` at the bottom of the stack
+  /// (`crates/nlipsy-core/src/serve.rs:458`).
+  ///
+  /// Only reached when this layer's `before` answered `pass` *and* the stack below it
+  /// succeeded: a failure goes straight back to the binding, as `?` does in Rust.
+  after: async func(index: u32, reply: message, cx: context) -> result<message, endpoint-error>;
+}
+
+/// Who created a token, and what this end-point's own tokens are —
+/// `TokenAuthority` (`crates/nlipsy-core/src/token.rs:94`).
+///
+/// **All three must be cheap and non-blocking**, and they are synchronous here for that
+/// reason: they run inside the request, on the path between the handler and the wire.
+/// A deployment that needs a database round trip should mint ahead of time. WIT has no
+/// default methods, so a host implements all three even though `issued` and `mint`
+/// default to `None` in Rust.
+interface host-authority {
+  use types.{context, token-kind};
+
+  /// `true` when this end-point created `token`, and may therefore decline to echo
+  /// it — §6.2's exception, `TokenAuthority::is_own`
+  /// (`crates/nlipsy-core/src/token.rs:111`).
+  ///
+  /// Usually a disjunction: the session remembers what it minted *while it is still
+  /// here*, and a signature is recognisable whether or not the conversation behind it
+  /// survived. The second half is the one that is easy to leave out, and without it a
+  /// token minted before a restart comes back looking like a stranger's, is echoed,
+  /// and tells the peer its conversation is intact when the end-point has no idea
+  /// whether it is. The session half needs the exchange's own state, which is why `cx`
+  /// is a parameter.
+  is-own: func(token: string, cx: context) -> bool;
+
+  /// The token of `kind` this end-point has **already** issued for this conversation —
+  /// a read with no side effect, `TokenAuthority::issued`
+  /// (`crates/nlipsy-core/src/token.rs:126`).
+  ///
+  /// Consulted on *every* reply, refusals included, whatever else the request
+  /// carried: §6.2.1 obliges the end-point that created a conversation token to keep
+  /// confirming it, and dropping it would leave the peer holding an identifier the
+  /// end-point no longer confirms. `none` means nothing has been issued yet.
+  issued: func(kind: token-kind, cx: context) -> option<string>;
+
+  /// Create a **new** token of `kind` and remember it — §6.2.1, §6.2.2,
+  /// `TokenAuthority::mint` (`crates/nlipsy-core/src/token.rs:140`).
+  ///
+  /// Called only when `issued` returned `none` *and* the request brought no token of
+  /// that kind this end-point did not create, so an implementation need not check
+  /// either and need not be idempotent. Remembering is its job: what it returns here
+  /// is what `issued` must answer with from the next exchange on. `none` declines,
+  /// which is always allowed — both clauses are optional.
+  ///
+  /// It is two functions and not one because they answer different questions, and the
+  /// case that breaks a combined one is real: a peer that returns this end-point's
+  /// conversation token *and* one of its own would lose the identifier the end-point is
+  /// obliged to keep confirming.
+  mint: func(kind: token-kind, cx: context) -> option<string>;
+}
+
+/// An alternative to `wasi:http/client` for the client half — `Transport`
+/// (`crates/nlipsy-core/src/transport.rs:172`).
+///
+/// For a host whose outgoing HTTP the runtime does not provide — a browser without a
+/// shim for `wasi:http/client`, say — and for a test. A host that never calls
+/// `client.call-through` still implements it, because WIT has no optional imports;
+/// reporting `unreachable` is the answer for one that has no transport.
+///
+/// The correlator is not in the signature: it travels in `context` and the transport
+/// decides how to write it, because it is one concept with a spelling per binding.
+interface host-transport {
+  use types.{context, exchange, transport-error};
+
+  /// Send `request` to the end-point and return what came back.
+  ///
+  /// Named `send` rather than after its seed, `Transport::exchange`, because the
+  /// `exchange` record is `use`d here and an interface has one namespace for its types
+  /// and its functions.
+  send: async func(request: list<u8>, cx: context) -> result<exchange, transport-error>;
+}
+
+/// Where a recording client puts what it saw — `RecordSink`
+/// (`crates/nlipsy-core/src/record.rs:287`).
+interface host-record-sink {
+  /// Append one exchange, already rendered as one JSON line.
+  ///
+  /// The line rather than the record, so that a sink needs no JSON codec of its own:
+  /// the spelling is `Recorded::to_json_line`
+  /// (`crates/nlipsy-core/src/record.rs:109`) unchanged, which is what lets a fixture
+  /// recorded from JavaScript load in Rust and the other way round. A failure is
+  /// reported and never swallowed — a recording that quietly stopped growing would
+  /// produce a fixture that passes for the wrong reason, and `client.call-recording`
+  /// turns a failure here into `transport-error.malformed`, exactly as `Recorder` does
+  /// (`crates/nlipsy-core/src/record.rs:294`).
+  ///
+  /// `async`, because writing is I/O and it is the user's. The seed's `record` is
+  /// synchronous and is called from inside a transport, so the guest buffers the line
+  /// that `Recorder` produced and hands it over once the exchange has returned; see
+  /// `crates/nlipsy-component/src/host.rs`.
+  write: async func(line: string) -> result<_, string>;
+}
+
+/// ECMA-430 clause 6, and the composed order around it — free functions.
+///
+/// Nothing here is a resource and nothing here holds state between calls. The
+/// `Conformity` (`crates/nlipsy-core/src/conformity.rs:387`) every function below runs
+/// under is built *per call* from `host-endpoint.conformity`,
+/// `host-endpoint.rejection-policy` and the `host-authority` import, which is the safe
+/// shape: `serve_answered`
+/// (`crates/nlipsy-core/src/serve.rs:325`) takes a `&Conformity` and asks for no
+/// `'static`, so nothing in the guest outlives an exported call.
+interface engine {
+  use types.{config, context, finding, finished, http-options, message, outcome, owed,
+             rejected, rejection, served, wire};
+
+  /// Issue nothing, and refuse above 32 tokens — `impl Default for ConformityConfig`
+  /// (`crates/nlipsy-core/src/conformity.rs:92`); the ceiling is
+  /// `DEFAULT_MAX_TOKENS_PER_MESSAGE` (`:70`).
+  ///
+  /// Exported because the corpus's `endpoint.config` block states only what a case is
+  /// about and everything else is this default, so a runner that re-typed the numbers
+  /// would be testing its own copy of them.
+  default-config: func() -> config;
+
+  /// Reject an error, log a warning, in both directions — `impl Default for Policy`
+  /// (`crates/nlipsy-core/src/conformity.rs:177`), which `Rejection` derives (`:224`).
+  default-rejection: func() -> rejection;
+
+  /// The reference server's binding, option for option — `impl Default for ServerConfig`
+  /// (`crates/nlipsy-server/src/server.rs:155`) and `impl Default for StatusMap`
+  /// (`crates/nlipsy-http/src/status.rs:105`).
+  ///
+  /// Exported as `default-config` is, with more force: nine status codes, a body limit
+  /// and a header name are the largest block of values a host would otherwise re-type,
+  /// and a host that re-typed them would be the second copy of ECMA-431 §6's defaults.
+  /// It is what `host-endpoint.http-binding` answers for a deployment that has changed
+  /// nothing.
+  ///
+  /// It serves the host that **instantiates** this component and calls its exports — the
+  /// npm package does — and it cannot serve an end-point component composed with
+  /// `wac plug`, which is joined to the imports and sees no export at all. A plugged
+  /// end-point therefore writes the eleven values out, and
+  /// `examples/echo-endpoint/src/host.rs` is what that looks like, with the reason on it.
+  default-http-options: func() -> http-options;
+
+  /// What clause 6 still owes the peer for this outcome — `owed`
+  /// (`crates/nlipsy-core/src/serve.rs:168`).
+  ///
+  /// A rule over a value, with no end-point, no context and no executor in it, which is
+  /// what lets a binding in another language apply the same rule to the same variant. A
+  /// host that produces a refusal of its own — a rate limiter that has already decoded
+  /// the request — asks this and hands the answer to `error-reply`.
+  ///
+  /// `ok` owes `clause6` like most failures do, and that is not an accident of the
+  /// match: the success path runs `close` for the same reason a refusal does.
+  owed-by: func(outcome: outcome) -> owed;
+
+  /// The text the peer may be shown, or `none` when there is nothing to explain —
+  /// `Outcome::public_message` (`crates/nlipsy-core/src/serve.rs:84`); the failure half
+  /// is `EndpointError::public_message` (`crates/nlipsy-core/src/endpoint.rs:201`).
+  ///
+  /// `none` for `ok` alone: the reply *is* the answer there. Exported so that a host
+  /// building its own error body does not restate the rule — and the rule includes
+  /// ECMA-434 §7.3.3, which is why the detail of an `internal` fault is deliberately
+  /// left out of the sentence it returns.
+  public-message: func(outcome: outcome) -> option<string>;
+
+  /// The delay a failing outcome asked a peer to wait, in milliseconds —
+  /// `Outcome::retry_after` (`crates/nlipsy-core/src/serve.rs:99`); the failure half is
+  /// `EndpointError::retry_after` (`crates/nlipsy-core/src/endpoint.rs:222`).
+  ///
+  /// `none` unless the outcome is a failure that named one, which today is
+  /// `endpoint-error.unavailable`. The guest's own `wasi:http/handler` asks this before
+  /// writing `Retry-After`; it is exported as well so that a host answering outside the
+  /// binding does not hold a second copy of a rule that moves.
+  retry-after-of: func(outcome: outcome) -> option<u64>;
+
+  /// The reply a refusal or a failure goes back as — `error_reply`
+  /// (`crates/nlipsy-core/src/serve.rs:206`).
+  ///
+  /// An NLIP `MessageType: Error` message carrying `why`, with what `owed-by` says
+  /// clause 6 still owes applied to it. Exported because a host produces refusals
+  /// `serve` never sees — a rate limiter that has decoded the request, a frame the
+  /// transport rejected — and those owe the peer the same three obligations, through
+  /// the *same* echo and the *same* confirmation the success path uses. Nothing is
+  /// minted.
+  ///
+  /// `request` is `none` exactly when `owed` is `nothing`: there was no message to echo
+  /// from. The mismatched combinations are not errors and simply owe nothing.
+  ///
+  /// `message-type` stays `Error` even for a control exchange: §6.3 names the boolean
+  /// and no other field, and `Error` is the one in-band marker a peer has for a
+  /// failure.
+  error-reply: func(request: option<message>, why: string, owed: owed,
+                    cx: context) -> message;
+
+  /// Clause 6's first step, on its own — `Conformity::check`
+  /// (`crates/nlipsy-core/src/conformity.rs:441`).
+  ///
+  /// Clause 5 under `rejection.inbound` first, then §6.2's token ceiling — in that
+  /// order, because a message that cannot be interpreted has no meaningful token count
+  /// and counting first would refuse it for the wrong reason. The findings it returns
+  /// are the ones it did **not** reject; a rejection is the error instead.
+  ///
+  /// `serve` runs it, so a caller that only serves does not need it. It is exported
+  /// because `conformance/README.md`'s language-neutral algorithm for an exchange case
+  /// drives this step and `finish` separately — which is the only way to attribute a
+  /// finding to `inbound` or `outbound`, since `served.findings` is one list with no
+  /// marked boundary. A caller that composes the two itself is composing a **second**
+  /// order and owes §6.1's reply on every path; `serve` is the
+  /// one this engine runs.
+  check: func(request: message, cx: context) -> result<list<finding>, rejected>;
+
+  /// Clause 6's second step, on its own — `Conformity::finish`
+  /// (`crates/nlipsy-core/src/conformity.rs:481`).
+  ///
+  /// Five steps, in this order and for this reason: the reply is sanitised against
+  /// clause 5 *before* anything is added to it, so a replacement error message carries
+  /// the echo rather than losing it; then §6.2's echo, then §6.2.1's confirmation of
+  /// what is already issued, then §6.2.1/§6.2.2's minting, then §6.3's control carry.
+  ///
+  /// Minting is here and nowhere else, which is why the composed order runs this at the
+  /// bottom of the layer stack rather than above it. Exported for `check`'s reason and
+  /// with `check`'s caution.
+  finish: func(request: message, reply: message, cx: context) -> finished;
+
+  /// The composed order, over bytes — `serve` (`crates/nlipsy-core/src/serve.rs:263`).
+  ///
+  /// Decode on `wire`, `check` outside the stack, the host's layers outermost first,
+  /// `answer` at the bottom with `finish` under it, the layers back innermost first,
+  /// `close` over whatever came back — unconditionally — and on any failure the rules
+  /// of `owed-by` and `error-reply` instead. This is what `wasi:http/handler` calls
+  /// once the binding has read the body.
+  ///
+  /// It never fails: every failure is a `served` with an `outcome` and a reply the peer
+  /// can read, because a binding that has to invent a body for a failure is a binding
+  /// that will invent a different one from the next binding.
+  ///
+  /// `cx.exchange` of `0` means the caller names no exchange and the guest mints one
+  /// for the call; see `types.context`.
+  serve: async func(request: list<u8>, wire: wire, cx: context) -> served;
+
+  /// The same order over a message already decoded — `serve_message`
+  /// (`crates/nlipsy-core/src/serve.rs:392`).
+  ///
+  /// For a binding whose frame carried a message, and for a caller that wants the
+  /// request for its own log line or audit trail, which it cannot have if the engine
+  /// decoded it.
+  serve-message: async func(request: message, cx: context) -> served;
+}
+
+/// An agent calling an end-point — free functions over `Client`
+/// (`crates/nlipsy-core/src/transport.rs:525`).
+///
+/// The guest holds no client state: the URL, the wire and the recording are the host's
+/// to keep and to pass, which is what makes every function here a free one. One `await`
+/// each: encode (`encode_request`, `crates/nlipsy-core/src/transport.rs:442`), carry,
+/// decode (`decode_reply`, `:466`) — and everything else, which end-point, how long to
+/// wait, whether to ask again, is the caller's, because a terminal client and a server
+/// fanning out to five peers want opposite things from the same exchange.
+interface client {
+  use types.{context, message, reply, transport-error, wire};
+
+  /// One exchange over `wasi:http/client@0.3.0` — `Client::send`
+  /// (`crates/nlipsy-core/src/transport.rs:576`) with the ECMA-431 §6 request this
+  /// binding writes.
+  ///
+  /// `POST url` with `CONTENT_TYPE`, which is `application/json`
+  /// (`crates/nlipsy-http/src/binding.rs:57`), and the correlator from `cx.correlator`
+  /// in `CORRELATOR_HEADER`, which is `x-nlip-correlator` (`:37`), when there is one.
+  /// `url` is the whole URL a deployment published, not a host and a port with
+  /// `NLIP_PATH` (`crates/nlipsy-http/src/binding.rs:21`) appended: an end-point may
+  /// sit behind a prefix a caller cannot derive.
+  ///
+  /// The reply's `detail` is `http` with the status and `Retry-After` read through
+  /// `parse_retry_after` (`crates/nlipsy-http/src/retry.rs:49`).
+  call: async func(url: string, request: message, wire: wire, cx: context) -> result<reply, transport-error>;
+
+  /// The same exchange over the host's `host-transport` import instead — for a host
+  /// whose outgoing HTTP the runtime does not provide yet, and for tests.
+  ///
+  /// Where the request is going is the transport's business, which is why there is no
+  /// `url` here: the host that supplies the transport is the host that knows.
+  call-through: async func(request: message, wire: wire, cx: context) -> result<reply, transport-error>;
+
+  /// `call`, with the exchange written to `host-record-sink` in the recorded-wire
+  /// spelling — `Recorder` (`crates/nlipsy-core/src/record.rs:294`) and
+  /// `Recorded::to_json_line` (`:109`).
+  ///
+  /// The fixture it writes is the one `replay` reads, and the one a Rust test loads:
+  /// the request as it went out, the status, and the reply body. A failure to write is
+  /// a `transport-error.malformed`, because a recording that quietly stopped growing
+  /// would produce a fixture that passes for the wrong reason.
+  call-recording: async func(url: string, request: message, wire: wire, cx: context) -> result<reply, transport-error>;
+
+  /// The reply a recording gives to `request` — `Replay`
+  /// (`crates/nlipsy-core/src/record.rs:342`), built from JSON-lines text
+  /// (`Replay::from_jsonl`, `:362`).
+  ///
+  /// `index` is the cursor, and it is the **host's**: the guest keeps no state, so a
+  /// caller replaying a transcript passes `0`, then `1`, and so on. The match is on the
+  /// *decoded* request and not on the bytes, because two encoders can spell one message
+  /// differently — CBOR especially — and a recording is evidence about the message
+  /// (`Replay::on_wire`, `:380`). A request the recorded exchange at `index` is not for
+  /// is refused rather than answered from the next one.
+  ///
+  /// Synchronous: a recording needs no executor, which is half of why recordings are
+  /// worth keeping. The error is prose naming the recording and the line — the
+  /// `Display` of `ReplayError` (`crates/nlipsy-core/src/record.rs:222`) or of the
+  /// `TransportError` the replay refused with.
+  replay: func(recording: string, index: u32, request: message, wire: wire) -> result<reply, string>;
+}
+
+/// The engine: the protocol, the composed order, the client, and the ECMA-431 §6
+/// binding — all in the component.
+///
+/// `types` is imported rather than exported because the five `host-*` interfaces depend
+/// on it and a world cannot export an interface reached through an import. It declares
+/// no functions, so it costs the instance no import item, and jco still writes its
+/// `.d.ts`.
+///
+/// `std` adds its fifteen `wasi:cli` and `wasi:clocks` imports on `wasm32-wasip3`; none
+/// of them is attributable to this contract.
+world nlipsy {
+  /// The shared vocabulary. See above for why this is an import.
+  import types;
+  /// The deployment's handler and its four configuration values.
+  import host-endpoint;
+  /// The deployment's layers, as a before/after pair per index.
+  import host-layers;
+  /// §6.2's exception, §6.2.1's confirmation, §6.2.1/§6.2.2's minting.
+  import host-authority;
+  /// The alternative to `wasi:http/client`, for a host whose runtime has none.
+  import host-transport;
+  /// Where a recording client writes.
+  import host-record-sink;
+  /// The outgoing half of ECMA-431 §6, for `client.call`.
+  import wasi:http/client@0.3.0;
+  /// The randomness `wasi:http/handler` mints a correlator from when the peer brought
+  /// none — `ServerConfig::correlator_for`
+  /// (`crates/nlipsy-server/src/server.rs:156`) uses a UUID v4 and this is where the
+  /// bytes for one come from. `std` does not link it on `wasm32-wasip3`, so the world
+  /// asks for it by name.
+  import wasi:random/random@0.3.0;
+  /// ECMA-430 clause 5, as pure functions.
+  export protocol;
+  /// Clause 6 and the composed order around it.
+  export engine;
+  /// The client half: `wasi:http`, the host's transport, recording and replay.
+  export client;
+  /// The incoming half of ECMA-431 §6. The one place a peer's bytes enter and the one
+  /// place they leave.
+  export wasi:http/handler@0.3.0;
+}

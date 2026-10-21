@@ -1,0 +1,19 @@
+{
+  "title": "A submessage Label that is not a string",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2.1 (\"Its value field must be a string as defined by ECMA-404\")",
+    "note": "composed: negative case for §5.2.1, which is the one clause that says in so many words what type a Label has."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"label\": 7, \"format\": \"text\", \"subformat\": \"english\", \"content\": \"and what is NLIP?\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "wrong-type",
+      "path": "submessages[0]",
+      "field": "label"
+    }
+  },
+  "notes": "`wrong-type` and not a violation: §5.2.1 fixes the type, so a number there is not an off-spec value of the field but a field that was never sent. A `label: null` is the other case and counts as absent (case 40), because an optional field explicitly emptied carries nothing a reader would have to refuse."
+}

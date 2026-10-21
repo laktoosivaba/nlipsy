@@ -1,0 +1,23 @@
+{
+  "title": "Out-of-band transfer: the control request",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4",
+    "note": "composed: §6.4 — \"a message with the MessageType field set to 'control', and the first submessage should include a text format request for the end-point to send large uploads\". The wording of the request is composed."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"control\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Please provide an end-point for large uploads.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Please provide an end-point for large uploads."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Please provide an end-point for large uploads.",
+    "canonical_json": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please provide an end-point for large uploads.\"}"
+  }
+}

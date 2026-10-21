@@ -1,0 +1,18 @@
+{
+  "title": "CBOR content carrying a tag",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; RFC 8949 §3.4",
+    "note": "composed: §7.1 lists String, Byte string, Array and Object as the CBOR content types, and a tag is none of them. Tag 0 says its text string is a date-time, meaning that JSON has no spelling for and that NLIP has no field for; stripping it would hand the application a value whose meaning had quietly changed. The bytes come from conformance/tools/cbor_encode.py with the `$tag` marker."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d61746a7374727563747572656469737562666f726d6174646a736f6e67636f6e74656e74c074323032352d31322d30315430303a30303a30305a",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "cbor",
+      "path": "$"
+    }
+  },
+  "notes": "The error is `cbor` — a codec-level failure — rather than a `wrong-type` against a field, because the value never becomes NLIP content at all. Bignum tags (2 and 3) are the exception: see 12-cbor-bignum-content."
+}

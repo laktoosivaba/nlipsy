@@ -1,0 +1,19 @@
+{
+  "title": "Binary content in the URL-safe base64 alphabet",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4; ECMA-432 §7.2",
+    "note": "composed: `-` and `_` belong to RFC 4648 §5, not to the standard alphabet of §4 that \"JSON Base64 encoding\" means. Rejected rather than accepted, because accepting both alphabets makes a payload's bytes depend on which decoder read it."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/jpeg\",\n  \"content\": \"q83v_w==\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "base64",
+      "path": "$",
+      "field": "content"
+    }
+  },
+  "notes": "Neither ECMA-430 §6.4 nor ECMA-432 §7.2 names an alphabet. A lenient implementation that accepts both would decode this to ab cd ef ff."
+}

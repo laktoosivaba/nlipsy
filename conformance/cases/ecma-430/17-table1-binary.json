@@ -1,0 +1,48 @@
+{
+  "title": "Table 1: every binary subformat the table gives as valid",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `binary`",
+    "note": "composed: the four subformats are Table 1's own examples — \"Valid values for subformat include are audio/bmp, audio/.bmp, video/.mp3, generic/.zip etc.\" The base64 payloads are composed; the table gives none."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"audio/bmp\",\n  \"content\": \"Qk0=\",\n  \"submessages\": [\n    {\"format\": \"binary\", \"subformat\": \"audio/.bmp\", \"content\": \"Qk0=\"},\n    {\"format\": \"binary\", \"subformat\": \"video/.mp3\", \"content\": \"SUQz\"},\n    {\"format\": \"binary\", \"subformat\": \"generic/.zip\", \"content\": \"UEsDBA==\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "audio/bmp",
+      "content": {
+        "$bytes": "Qk0="
+      },
+      "submessages": [
+        {
+          "format": "binary",
+          "subformat": "audio/.bmp",
+          "content": {
+            "$bytes": "Qk0="
+          }
+        },
+        {
+          "format": "binary",
+          "subformat": "video/.mp3",
+          "content": {
+            "$bytes": "SUQz"
+          }
+        },
+        {
+          "format": "binary",
+          "subformat": "generic/.zip",
+          "content": {
+            "$bytes": "UEsDBA=="
+          }
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"audio/bmp\",\"content\":\"Qk0=\",\"submessages\":[{\"format\":\"binary\",\"subformat\":\"audio/.bmp\",\"content\":\"Qk0=\"},{\"format\":\"binary\",\"subformat\":\"video/.mp3\",\"content\":\"SUQz\"},{\"format\":\"binary\",\"subformat\":\"generic/.zip\",\"content\":\"UEsDBA==\"}]}"
+  },
+  "notes": "`video` is not in Table 1's list of content kinds (audio, image, sensor, generic) yet `video/.mp3` is Table 1's own example of a valid subformat. The crate resolves the contradiction in favour of the example and accepts `video` as a fifth kind, so no binary-content-kind warning is expected here."
+}

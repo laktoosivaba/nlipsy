@@ -1,0 +1,24 @@
+{
+  "title": "Control message spelled as a boolean `control` field",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.3",
+    "note": "composed: §6.3 speaks of \"a message which has the control field set to true\", which is a different spelling from §5.1.1's MessageType value. Both are accepted."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": true,\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Please share your rate control policies.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "control": true,
+      "format": "text",
+      "subformat": "english",
+      "content": "Please share your rate control policies."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Please share your rate control policies.",
+    "canonical_json": "{\"control\":true,\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please share your rate control policies.\"}"
+  },
+  "notes": "ECMA-430 never defines a `control` field in §5.1; it appears only in §6.3's prose and in TR/113's figures. The crate accepts both spellings and preserves whichever arrived."
+}

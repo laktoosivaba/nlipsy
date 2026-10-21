@@ -1,0 +1,22 @@
+{
+  "title": "Format value in upper case",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5, \"Capitalization is not relevant to the name or value of the field\"",
+    "note": "composed: §5 makes the *value* of a field case-insensitive too, so `TEXT` is the Table 1 value `text`."
+  },
+  "wire": "json",
+  "input": "{\n  \"Format\": \"TEXT\",\n  \"Subformat\": \"English\",\n  \"Content\": \"Capitalization is not relevant.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "English",
+      "content": "Capitalization is not relevant."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Capitalization is not relevant.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"Capitalization is not relevant.\"}"
+  }
+}

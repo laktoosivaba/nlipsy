@@ -1,0 +1,19 @@
+{
+  "title": "A submessage without its required `content`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2.4 (\"This content field is required\")",
+    "note": "composed: negative case for §5.2.4 at a submessage path, completing the three required submessage fields with 13-submessage-missing-subformat and 28-submessage-missing-format."
+  },
+  "wire": "json",
+  "input": "{\n  \"Format\": \"text\",\n  \"Subformat\": \"english\",\n  \"Content\": \"What is Ecma?\",\n  \"Submessages\": [\n    {\"Format\": \"token\", \"Subformat\": \"conversation\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "missing-field",
+      "path": "submessages[0]",
+      "field": "content"
+    }
+  },
+  "notes": "An absent content is not the same as `content: null`, which Annex A allows and 07-content-null records: one is a field the message does not have, the other a field whose value is null."
+}

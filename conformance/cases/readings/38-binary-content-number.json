@@ -1,0 +1,29 @@
+{
+  "title": "Binary content that is a number",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.4, §5.3 Table 1 (row `binary`); §6.4",
+    "note": "composed: the third shape a `binary` content can wrongly take, after an object (case 34) and an array (case 37). Table 1 makes `binary` bytes, and §6.4 makes the JSON spelling base64."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"sensor/counter\",\n  \"content\": 9060312\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "sensor/counter",
+      "content": 9060312
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"sensor/counter\",\"content\":9060312}"
+  },
+  "notes": "A number is not a lenient spelling of bytes the way unpadded base64 is a lenient spelling of base64 (case 06): there is no rule under which it decodes to a payload, so it is an error rather than a warning. A peer that means to send a reading rather than a recording wants `location`, `structured` or `generic`."
+}

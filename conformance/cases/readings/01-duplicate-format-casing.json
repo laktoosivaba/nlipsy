@@ -1,0 +1,19 @@
+{
+  "title": "`format` and `Format` in the same object",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5 (\"Capitalization is not relevant to the name or value of the field\")",
+    "note": "composed: negative case for §5. Two spellings of one field name, which §5 makes the same field; the standard says nothing about which value wins, so the crate refuses rather than choosing (README, \"Case, and the order of submessages\")."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"Format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Which spelling wins?\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "duplicate-field",
+      "path": "$",
+      "field": "format"
+    }
+  },
+  "notes": "Both spellings carry the same value here, so a resolving implementation would see nothing wrong. The corpus pins the refusal anyway: the rule is about the ambiguity, not about whether it happens to matter."
+}

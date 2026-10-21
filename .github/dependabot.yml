@@ -1,0 +1,17 @@
+# Weekly rather than daily: this workspace has a handful of dependencies and no
+# release cadence to keep up with, so a daily schedule would mostly produce pull
+# requests that sit. Weekly is still well inside any advisory window worth caring
+# about, and `cargo deny` fails the build for the ones that are not.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Actions are pinned by major tag, so this only sees genuine major bumps —
+  # `actions/checkout@v4` to `@v5` — rather than every patch release.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,31 @@
+{
+  "title": "Text content sent as a CBOR byte string",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; ECMA-430 §5.1.4",
+    "note": "composed: the mirror image of 06 — raw bytes under a `text` format. §5.1.4 says the content \"must be represented as specified by the format\", which for text is a string, so this decodes and validate reports an Error."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d6174647465787469737562666f726d617465656e2d555367636f6e74656e744548656c6c6f",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "en-US",
+      "content": {
+        "$bytes": "SGVsbG8="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.1.4/text-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"en-US\",\"content\":\"SGVsbG8=\"}"
+  },
+  "notes": "The other case where canonical_json is not a fixed point: the bytes are re-encoded as the base64 string `SGVsbG8=`, which on the JSON wire is a string and so raises no finding at all. The bytes are UTF-8 for \"Hello\" and could in principle be decoded as text; the crate does not, because a byte string is not a text string and guessing the encoding is the sender's job."
+}

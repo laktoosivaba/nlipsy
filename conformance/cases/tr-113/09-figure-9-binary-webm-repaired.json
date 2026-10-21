@@ -1,0 +1,32 @@
+{
+  "title": "Speech-to-text agent sends base64 audio (payload repaired)",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.3 Figure 9",
+    "note": "composed from a verbatim figure: Figure 9 with one `A` added to the content and the padding corrected to `==`, so that the payload is decodable base64 (sixteen zero bytes). Everything else is the figure's own text. Composed because the figure's own payload cannot be decoded at all, which would hide the rest of the message behind a base64 error."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": false,\n  \"format\": \"binary\",\n  \"subformat\": \"webm\",\n  \"content\": \"AAAAAAAAAAAAAAAAAAAAAA==\", \n  \"submessages\": []\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "control": false,
+      "format": "binary",
+      "subformat": "webm",
+      "content": {
+        "$bytes": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"control\":false,\"format\":\"binary\",\"subformat\":\"webm\",\"content\":\"AAAAAAAAAAAAAAAAAAAAAA==\"}"
+  },
+  "notes": "`\"subformat\": \"webm\"` has no `/`, which Table 1 requires of a binary subformat; it is reported as a Warning rather than rejected, because the committee that wrote the table published this figure. `\"control\": false` is the third spelling of control (see ecma-430/25)."
+}

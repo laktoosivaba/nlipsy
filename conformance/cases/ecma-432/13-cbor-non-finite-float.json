@@ -1,0 +1,18 @@
+{
+  "title": "CBOR content that is a non-finite float",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; ECMA-430 §5 ¶4; RFC 8949 §3.3",
+    "note": "composed: ECMA-430 §5 requires all types to be represented as ECMA-404 defines them, and ECMA-404 has neither NaN nor infinity, while CBOR spells +Inf as an ordinary double. The bytes are `{\"format\": \"structured\", \"subformat\": \"json\", \"content\": {\"$float\": \"inf\"}}` through conformance/tools/cbor_encode.py."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d61746a7374727563747572656469737562666f726d6174646a736f6e67636f6e74656e74fb7ff0000000000000",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "cbor",
+      "path": "$"
+    }
+  },
+  "notes": "Refused rather than read as null. Null is a value the peer did not send: a sensor reading of infinity arriving as \"no reading\" is wrong data standing where an error belongs, and the application cannot tell the two apart afterwards. This is the same rule 12-cbor-bignum-content draws for integers — kept while ECMA-404 can hold the value, refused once it cannot. NaN and -Inf are the same case and are not recorded separately."
+}

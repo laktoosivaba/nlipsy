@@ -1,0 +1,19 @@
+{
+  "title": "`subformat` present but null",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.3; Annex A (\"Subformat\": {\"type\": \"string\"})",
+    "note": "composed: a null carries no value the standard could interpret as the required string, so it counts as missing rather than as a wrong type."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": null,\n  \"content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "missing-field",
+      "path": "$",
+      "field": "subformat"
+    }
+  },
+  "notes": "This is a reading, not a rule the standard states. `wrong-type` would be defensible; `missing-field` is chosen because Annex A's `required` list is what the message breaks."
+}

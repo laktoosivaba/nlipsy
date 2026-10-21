@@ -1,0 +1,22 @@
+{
+  "title": "First back-end agent's answer",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.2 (\"One of the NLIP servers may respond as\")",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\"}"
+  }
+}

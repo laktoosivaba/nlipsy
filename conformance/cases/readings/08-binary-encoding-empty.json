@@ -1,0 +1,30 @@
+{
+  "title": "Binary subformat with an empty encoding part",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `binary`)",
+    "note": "composed: `image/` names a content kind and no encoding, so the payload has no type — an Error, unlike the shape warnings around it."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/\",\n  \"content\": \"/9j/4A==\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/",
+      "content": {
+        "$bytes": "/9j/4A=="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-encoding",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/\",\"content\":\"/9j/4A==\"}"
+  }
+}

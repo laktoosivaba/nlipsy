@@ -1,0 +1,37 @@
+{
+  "kind": "exchange",
+  "title": "A reply a layer answered still carries §6.3's control flag",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.3",
+    "quote": "If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true."
+  },
+  "endpoint": {
+    "short_circuit": true,
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "The service is in maintenance mode."
+    }
+  },
+  "request": {
+    "control": true,
+    "format": "text",
+    "subformat": "english",
+    "content": "what is your privacy policy?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "control": true,
+      "messagetype": null,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": []
+    },
+    "findings": []
+  },
+  "notes": "`ecma-430/36` with the reply produced by a layer instead of by the handler, and the expectation is the same one for the same reason: §6.3 is unconditional and names the boolean and no other field, so the boolean goes on whichever spelling arrived and `messagetype` stays absent, because the peer never used it. The reading is `readings/51`'s — the clause is about the message the peer receives. A maintenance-mode layer is the natural way to produce this exchange: it is precisely the layer that answers every request without asking the handler, and it is precisely the one whose replies a peer reads as control replies. §6.3 is the cheapest of the three obligations to lose, because a reply that is wrong about it is still a perfectly well-formed message."
+}

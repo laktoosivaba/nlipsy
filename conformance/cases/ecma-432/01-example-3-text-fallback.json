@@ -1,0 +1,19 @@
+{
+  "title": "Example 3: JSON text fallback (as printed)",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§8 Example 3: text fallback (JSON over WebSocket text frame)",
+    "note": "verbatim: copied exactly as the standard prints it, including the `...` that ends the content string."
+  },
+  "wire": "json",
+  "input": "{\n  \"MessageType\": \"Request\",\n  \"Format\": \"binary\",\n  \"Subformat\": \"audio/wav;base64\",\n  \"Content\": \"UklGRngAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YYAA...\",\n  \"Submessages\": [\n    {\n      \"Label\": \"transcription\",\n      \"Format\": \"text\",\n      \"Subformat\": \"en-US\",\n      \"Content\": \"What's the current stock price of Tesla?\"\n    }\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "base64",
+      "path": "$",
+      "field": "content"
+    }
+  },
+  "notes": "The payload ends in `...`, which is the standard's way of showing a truncated WAV file, not base64. Under §7.2 (\"Binary data shall be base64-encoded\") this cannot be decoded, so the expectation is a base64 error; 02-example-3-text-fallback-truncated-payload is the same message with the ellipsis removed. Conflict recorded rather than resolved."
+}

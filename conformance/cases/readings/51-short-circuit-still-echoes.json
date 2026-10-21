@@ -1,0 +1,50 @@
+{
+  "kind": "exchange",
+  "title": "A reply a layer answered without the handler still echoes the peer's token",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "short_circuit": true,
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Served from the cache."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation_9.2.3.5",
+        "content": "cli-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "cli-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "The reading, and it is the first of five: §6.2's obligation attaches to the reply **on the wire**, not to the code path that produced it. The standard knows no layers — it names an \"end-point\" and says what its response message must contain — so an implementation with a message-level layer that answers on its own (a cache, a canned answer, a maintenance-mode layer) has to decide what such a reply owes, and nothing in ECMA-430 decides it. This corpus reads the clause as being about the message the peer receives, which makes the answer the same whoever produced it: `endpoint.short_circuit` is the case shape for that reading. Here the layer answered with a bare text message carrying no tokens, and the peer's `cli-1` is in the reply anyway. An implementation whose layers sit *above* clause 6 rather than inside it produces the same reply and passes; one that lets a layer out past the echo does not, and that is the point of the case rather than an accident of this workspace's composition."
+}

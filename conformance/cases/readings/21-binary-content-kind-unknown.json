@@ -1,0 +1,30 @@
+{
+  "title": "Binary content kind outside the known set",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `binary`)",
+    "note": "composed: the subformat has the required <content>/<encoding> shape, but `text` is not one of audio, image, sensor, generic (or video, from the table's examples). Warning: the encoding is still known."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"text/plain\",\n  \"content\": \"SGVsbG8=\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "text/plain",
+      "content": {
+        "$bytes": "SGVsbG8="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-content-kind",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"text/plain\",\"content\":\"SGVsbG8=\"}"
+  }
+}

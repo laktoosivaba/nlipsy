@@ -1,0 +1,19 @@
+{
+  "title": "Speech-to-text agent sends base64 audio (as printed)",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.3 Figure 9, NLIP message format for Speech to Text Agent",
+    "note": "verbatim: copied exactly as the figure prints it, including the content string."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": false,\n  \"format\": \"binary\",\n  \"subformat\": \"webm\",\n  \"content\": \"AAAAAAAAAAAAAAAAAAAAA=\", \n  \"submessages\": []\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "base64",
+      "path": "$",
+      "field": "content"
+    }
+  },
+  "notes": "The figure's content is 21 base64 characters followed by one `=`. No base64 string can have 21 data characters (21 mod 4 == 1), with or without padding, so the committee's own figure does not decode: the expectation is a base64 error. This is the clearest conflict in the corpus — see 09-figure-9-binary-webm-repaired for the same message with a payload that decodes. An implementation that accepts this input is not applying ECMA-430 §6.4 / ECMA-432 §7.2 base64 at all."
+}

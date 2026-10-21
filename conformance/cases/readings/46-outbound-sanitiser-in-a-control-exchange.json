@@ -1,0 +1,46 @@
+{
+  "kind": "exchange",
+  "title": "The replacement error message keeps MessageType Error and carries control-ness as the boolean",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "5.1.1, 6.3",
+    "quote": "If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true."
+  },
+  "endpoint": {
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": {
+        "oops": 1
+      }
+    }
+  },
+  "request": {
+    "control": true,
+    "format": "text",
+    "subformat": "english",
+    "content": "what is your privacy policy?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "messagetype": "Error",
+      "control": true,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": []
+    },
+    "withheld": true,
+    "findings": [
+      {
+        "direction": "outbound",
+        "rule": "ecma430-5.1.4/text-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ]
+  },
+  "notes": "`readings/45` with a control request, and the reading is what the replacement keeps. A replacement error message in a control exchange keeps `MessageType: Error` and satisfies §6.3 by the boolean alone. §6.3 names \"control field set to true\" and no other field; §5.1.1 gives `MessageType` one value, so a reply cannot spell both `control` and `Error` there, and `Error` is the one in-band marker for a failure (TR/113 §10, ECMA-432 §11, `Reply::is_error`). A peer that reads only `MessageType` sees an error and not a control reply; a peer that reads §6.3's field sees both. A handler that answers a control request with `Message::error(..)` produces the same shape on the happy path, so the two paths agree. `messagetype: \"Control\"` with `control: true` would be a legal control message under §5.1.1 and §6.3 and breaks no clause; it is not taken because it costs the peer the only field that says the exchange failed, and because this workspace's own client reads that field. Either way the peer is told what happened by the message's text content, which is the same in both."
+}

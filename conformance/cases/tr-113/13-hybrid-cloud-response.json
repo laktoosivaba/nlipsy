@@ -1,0 +1,30 @@
+{
+  "title": "On-premises NLIP server confirms",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.5, Hybrid Cloud Integration (response)",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n    \"messagetype\": \"Response\",\n    \"format\": \"text\",\n    \"subformat\": \"en-us\",\n    \"content\": \"confirm_account_disabled\",\n    \"submessages\": [\n        {\n            \"format\": \"text\",\n            \"subformat\": \"en-us\",\n            \"content\": \"All local accounts for John Acme including john.acme@local.com have been disabled\"\n        }\n    ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Response",
+      "format": "text",
+      "subformat": "en-us",
+      "content": "confirm_account_disabled",
+      "submessages": [
+        {
+          "format": "text",
+          "subformat": "en-us",
+          "content": "All local accounts for John Acme including john.acme@local.com have been disabled"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "confirm_account_disabled All local accounts for John Acme including john.acme@local.com have been disabled",
+    "canonical_json": "{\"messagetype\":\"Response\",\"format\":\"text\",\"subformat\":\"en-us\",\"content\":\"confirm_account_disabled\",\"submessages\":[{\"format\":\"text\",\"subformat\":\"en-us\",\"content\":\"All local accounts for John Acme including john.acme@local.com have been disabled\"}]}"
+  }
+}

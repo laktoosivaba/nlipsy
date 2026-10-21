@@ -1,0 +1,30 @@
+{
+  "title": "Structured subformat that is a media type",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `structured`); ECMA-432 §8 Example 1",
+    "note": "composed: Table 1 allows json, uri, xml, html or the name of a programming language. `application/json` is a media type and none of those, but ECMA-432's own Example 1 sends it, so it is a Warning."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"structured\",\n  \"subformat\": \"application/json\",\n  \"content\": {\"intent\": \"weather_query\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "structured",
+      "subformat": "application/json",
+      "content": {
+        "intent": "weather_query"
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/structured-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"structured\",\"subformat\":\"application/json\",\"content\":{\"intent\":\"weather_query\"}}"
+  }
+}

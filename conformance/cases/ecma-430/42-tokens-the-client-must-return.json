@@ -1,0 +1,49 @@
+{
+  "title": "An end-point's two tokens, as the client receives them to return",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.2 ¶2, §6.2.1 ¶2, §6.2.2 ¶3",
+    "note": "composed: §6.2 ¶2 — an end-point receiving a token submessage \"must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point\". The clause is symmetric, so this is a reply and the receiver is the client. The subformat suffix is §6.2.1's own example of one ('conversation_9.2.3.5', \"to indicate that the message was created by the agent with identity 9.2.3.5\"); the token contents are opaque to the protocol and are composed."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Ecma International is a standards organisation.\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"conversation_srv-7\", \"content\": \"c-8f04\"},\n    {\"format\": \"token\", \"subformat\": \"authentication_srv-7\", \"content\": \"a-2b19\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Ecma International is a standards organisation.",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "conversation_srv-7",
+          "content": "c-8f04"
+        },
+        {
+          "format": "token",
+          "subformat": "authentication_srv-7",
+          "content": "a-2b19"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Ecma International is a standards organisation.",
+    "tokens": [
+      {
+        "subformat": "conversation_srv-7",
+        "content": "c-8f04",
+        "kind": "conversation"
+      },
+      {
+        "subformat": "authentication_srv-7",
+        "content": "a-2b19",
+        "kind": "authentication"
+      }
+    ],
+    "token_count": 2,
+    "first_submessage_token": null,
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Ecma International is a standards organisation.\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"conversation_srv-7\",\"content\":\"c-8f04\"},{\"format\":\"token\",\"subformat\":\"authentication_srv-7\",\"content\":\"a-2b19\"}]}"
+  },
+  "notes": "`tokens` here is the set §6.2 ¶2 obliges the *receiver* to return, and this receiver is the client: the clause says \"the end-point must include the same submessage with the exact same format, subformat and content in its response message\", and a client's response is its next request. Both entries must come back with the subformat exactly as recorded — the `_srv-7` suffix is §6.2.1's identity of the agent that created the token, not decoration — and the second is not optional: §6.2.2 makes returning the authentication token unmodified an obligation, where §6.2.1's own token is only an invitation. The accessor for this in Rust is `Reply::tokens`, which is *not* this list alone: it chains `readings/36`'s first-submessage predicate in front of it, because a message that is itself a token carries one for §6.2's purposes. That composition is what no case here can pin, since `tokens` excludes the first submessage by definition. The two halves of it are asserted separately instead: `token_count` is two and `first_submessage_token` is explicitly none here, and `readings/36` is the message where the same two keys read one and a token."
+}

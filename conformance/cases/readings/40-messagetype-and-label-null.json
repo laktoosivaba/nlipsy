@@ -1,0 +1,23 @@
+{
+  "title": "Optional string fields sent as null",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.1, §5.2.1; Annex A (Content typed as a union including null, MessageType as a string)",
+    "note": "composed: the counterpart of 33-content-null-text. `MessageType` and `Label` are optional and typed as strings, so a null there carries nothing the standard could interpret and is read as an absence rather than refused."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": null,\n  \"label\": null,\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  },
+  "notes": "The asymmetry with `content: null` is Annex A's: the schema types `Content` as a union that includes null and `MessageType` as a string, so a null content is a value the message carries and a null message type is a field it does not. A *required* string field sent as null is a missing field, not an absence to tolerate — case 20 pins that for `subformat`."
+}

@@ -1,0 +1,30 @@
+{
+  "title": "Text content that is an object",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.4 (\"must be represented as specified by the format\")",
+    "note": "composed: Annex A allows an object as Content in general, and §5.1.4 requires it to match the format; `text` means a string. Decodes, and validate reports an Error."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": {\"text\": \"What is Ecma?\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": {
+        "text": "What is Ecma?"
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.1.4/text-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":{\"text\":\"What is Ecma?\"}}"
+  }
+}

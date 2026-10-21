@@ -1,0 +1,30 @@
+{
+  "title": "A token in the first submessage",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5 ¶2, §5.3 Table 1 (row `token`), §6.2 ¶2",
+    "note": "composed: §5 ¶2 calls the leading object \"the first submessage\", and nothing in Table 1 keeps a `token` out of it. Ecma's reference Python SDK builds exactly this message with `NLIP_Factory.create_token`."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"token\",\n  \"subformat\": \"authentication_9.2.3.5\",\n  \"content\": \"opaque-credential\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "token",
+      "subformat": "authentication_9.2.3.5",
+      "content": "opaque-credential"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "tokens": [],
+    "token_count": 1,
+    "first_submessage_token": {
+      "subformat": "authentication_9.2.3.5",
+      "content": "opaque-credential",
+      "label": null
+    },
+    "canonical_json": "{\"format\":\"token\",\"subformat\":\"authentication_9.2.3.5\",\"content\":\"opaque-credential\"}"
+  },
+  "notes": "`tokens` is empty by the definition in this README: it lists the `token` entries of the `submessages` array, and the first submessage is not one of them. That is a statement about the accessor, not about §6.2: this message does contain a token submessage, and an end-point echoing tokens must answer it. An implementation therefore needs a predicate over the first submessage beside the list — in `nlipsy-protocol`, `Message::is_token` and `Message::is_authentication_token`, which report true and true here. `token_count` and `first_submessage_token` are that predicate asserted directly rather than through its consequences: the count is one where `tokens` is empty, and the first submessage comes back as the `token` submessage §6.2 obliges an end-point to return — `readings/41` is the same message put to an end-point, where the echo is what shows it."
+}

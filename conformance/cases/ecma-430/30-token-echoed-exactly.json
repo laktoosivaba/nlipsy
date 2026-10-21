@@ -1,0 +1,53 @@
+{
+  "kind": "exchange",
+  "title": "A token submessage comes back with the exact same format, subformat and content",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "An international standards body."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "Group_Alpha",
+        "content": "AbC-123_x/+"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "messagetype": null,
+      "control": null,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "Group_Alpha",
+          "content": "AbC-123_x/+",
+          "label": null
+        }
+      ]
+    },
+    "withheld": false,
+    "findings": []
+  },
+  "notes": "Three things are asserted at once, and all three are the words \"exact same\". The subformat keeps its mixed case: §5 makes the *format* value case-insensitive and says nothing that would let an end-point rewrite an opaque one. The content keeps every byte, including the `/` and `+` that a base64-guessing implementation might try to normalise. And `Group_Alpha` is neither of §5.3's two reserved prefixes — §6.2 ¶4 allows \"any general string\" and conditions the echo on nothing — so a token an end-point cannot interpret still comes back. The reply's own first submessage stays the end-point's answer: §6.2 ¶2 asks for the submessage and says nothing about where it goes, while §5.1.4 has already spoken for the first one. `authority.own` is empty, so the exception does not apply to anything here. `withheld` is `false` and is asserted for one reason: it is the corpus's ordinary value, and a flag only ever pinned where it is `true` would pass an implementation that always answered `true` — `readings/45` and `/46` are the other half."
+}

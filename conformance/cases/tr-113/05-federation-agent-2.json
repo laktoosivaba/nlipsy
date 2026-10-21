@@ -1,0 +1,22 @@
+{
+  "title": "Second back-end agent's answer",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.2 (\"Another one may respond as\")",
+    "note": "verbatim, minimally repaired: the PDF extraction ends the fence after the subformat line and leaves the content line in the prose below; that line also closes its string with a typographic right double quote (U+201D) instead of a straight one. The content line is put back inside the object and the closing quote is straightened; nothing else is changed."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\"content\":\"ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols.\" }",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"ECMA (European Computer Manufacturers Association) International is a non-profit organization that develops and publishes standards for the information technology (IT) industry. ECMA is known for its role in standardizing various technologies, including programming languages, data formats, and communication protocols.\"}"
+  }
+}

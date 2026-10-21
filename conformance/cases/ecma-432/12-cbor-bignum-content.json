@@ -1,0 +1,23 @@
+{
+  "title": "CBOR bignum content that fits an ECMA-404 number",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; RFC 8949 §3.4.3 (bignum)",
+    "note": "composed: the one tag that is kept. A positive bignum is tag 2 over a byte string, and the codec resolves it to an integer before the message model sees it; 2^64-1 is the largest value ECMA-404 can still hold exactly, so it decodes to a number rather than being refused. The bytes are `{\"$tag\": [2, {\"$bytes\": \"//////////8=\"}]}` through conformance/tools/cbor_encode.py — tag 2 over eight 0xff bytes."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d61746a7374727563747572656469737562666f726d6174646a736f6e67636f6e74656e74c248ffffffffffffffff",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "structured",
+      "subformat": "json",
+      "content": 18446744073709551615
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"structured\",\"subformat\":\"json\",\"content\":18446744073709551615}"
+  },
+  "notes": "A bignum one bit larger has no ECMA-404 spelling and is refused rather than rounded into a float. The corpus does not pin that case, because the error it produces is a codec-level `cbor` failure whose boundary is the codec's, not the protocol's."
+}

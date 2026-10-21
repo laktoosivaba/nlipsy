@@ -1,0 +1,31 @@
+{
+  "title": "Binary subformat with no `/`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `binary`); Ecma TR/113 §11.3 Figure 9",
+    "note": "composed: the reading TR/113 Figure 9 forces — a binary subformat that is a bare encoding name. Warning, not rejection, because the committee's own figure sends one (README, \"binary subformats are usually reported, not rejected\"). Composed rather than copied so that the payload decodes and the case is only about the subformat; the figure itself is tr-113/08 and tr-113/09."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": false,\n  \"format\": \"binary\",\n  \"subformat\": \"webm\",\n  \"content\": \"GkXfow==\",\n  \"submessages\": []\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "control": false,
+      "format": "binary",
+      "subformat": "webm",
+      "content": {
+        "$bytes": "GkXfow=="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"control\":false,\"format\":\"binary\",\"subformat\":\"webm\",\"content\":\"GkXfow==\"}"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Text extraction follows document order",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.5 (\"the order of the submessages field is significant\")",
+    "note": "composed: the first submessage's text comes first, then every text submessage in the order it arrived, joined by single spaces. Non-text submessages are skipped and the language is not filtered — a French submessage is text too."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"binary\", \"subformat\": \"image/png\", \"content\": \"iVBORw0=\"},\n    {\"format\": \"text\", \"subformat\": \"french\", \"content\": \"Qu'est-ce qu'Ecma?\"},\n    {\"format\": \"token\", \"subformat\": \"conversation_9.2.3.5\", \"content\": \"6f1c0b12\"},\n    {\"format\": \"text\", \"subformat\": \"english\", \"content\": \"Please answer in both.\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "binary",
+          "subformat": "image/png",
+          "content": {
+            "$bytes": "iVBORw0="
+          }
+        },
+        {
+          "format": "text",
+          "subformat": "french",
+          "content": "Qu'est-ce qu'Ecma?"
+        },
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "6f1c0b12"
+        },
+        {
+          "format": "text",
+          "subformat": "english",
+          "content": "Please answer in both."
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma? Qu'est-ce qu'Ecma? Please answer in both.",
+    "tokens": [
+      {
+        "subformat": "conversation_9.2.3.5",
+        "content": "6f1c0b12",
+        "kind": "conversation"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"binary\",\"subformat\":\"image/png\",\"content\":\"iVBORw0=\"},{\"format\":\"text\",\"subformat\":\"french\",\"content\":\"Qu'est-ce qu'Ecma?\"},{\"format\":\"token\",\"subformat\":\"conversation_9.2.3.5\",\"content\":\"6f1c0b12\"},{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please answer in both.\"}]}"
+  },
+  "notes": "The join is a single space even where the pieces are separate sentences; extraction is not formatting."
+}

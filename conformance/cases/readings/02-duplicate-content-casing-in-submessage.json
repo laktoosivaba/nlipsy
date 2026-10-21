@@ -1,0 +1,18 @@
+{
+  "title": "`content` and `Content` in a submessage",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5, §5.2.4",
+    "note": "composed: negative case for §5, at a path other than `$`, and with two values that genuinely disagree."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"text\", \"subformat\": \"english\", \"content\": \"first\", \"Content\": \"second\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "duplicate-field",
+      "path": "submessages[0]",
+      "field": "content"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "title": "A submessage without its required `format`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2.2 (\"The format field is required and is a string\")",
+    "note": "composed: negative case for §5.2.2 at a submessage path, where 08-missing-format covers the first submessage."
+  },
+  "wire": "json",
+  "input": "{\n  \"Format\": \"text\",\n  \"Subformat\": \"english\",\n  \"Content\": \"What is Ecma?\",\n  \"Submessages\": [\n    {\"Subformat\": \"english\", \"Content\": \"and what is NLIP?\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "missing-field",
+      "path": "submessages[0]",
+      "field": "format"
+    }
+  },
+  "notes": "The path is what the case is for: a message whose second submessage is malformed must say which one, or a peer debugging a long exchange has to bisect it."
+}

@@ -1,0 +1,17 @@
+{
+  "title": "A submessage that is not an object",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2, Annex A items (\"type\": \"object\")",
+    "note": "composed: negative case for §5.2 — the array element is a string, not a submessage object."
+  },
+  "wire": "json",
+  "input": "{\n  \"Format\": \"text\",\n  \"Subformat\": \"English\",\n  \"Content\": \"What is Ecma?\",\n  \"Submessages\": [\"What is Ecma?\"]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "not-object",
+      "path": "submessages[0]"
+    }
+  }
+}

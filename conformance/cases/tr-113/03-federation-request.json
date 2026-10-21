@@ -1,0 +1,22 @@
+{
+  "title": "Client asks the federation proxy",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.2, NLIP for federation among various agents (first example)",
+    "note": "verbatim. Byte-identical to §11.1's request; it is kept as its own case because the corpus is indexed by provenance — §11.2 sends this same message on to three back-end agents."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  }
+}

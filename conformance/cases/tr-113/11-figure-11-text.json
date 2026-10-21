@@ -1,0 +1,23 @@
+{
+  "title": "Search agent returns a text answer",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.3 Figure 11, NLIP message format for Reddit Search Agent",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n  \"control\": false,\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"If you're experiencing issues with IBM Cloud services, common solutions include .....\",\n  \"submessages\": []\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "control": false,
+      "format": "text",
+      "subformat": "english",
+      "content": "If you're experiencing issues with IBM Cloud services, common solutions include ....."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "If you're experiencing issues with IBM Cloud services, common solutions include .....",
+    "canonical_json": "{\"control\":false,\"format\":\"text\",\"subformat\":\"english\",\"content\":\"If you're experiencing issues with IBM Cloud services, common solutions include .....\"}"
+  }
+}

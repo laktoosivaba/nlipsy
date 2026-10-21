@@ -1,0 +1,38 @@
+{
+  "kind": "exchange",
+  "title": "A reply a layer answered never mints a conversation token",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.1",
+    "quote": "Either the client agent or the server agent may be the first one to create a submessage with format field of 'token' and the subformat field starting with 'conversation'. The other agent can optionally add another submessage with the format of 'token' and the subformat of 'conversation' if it wants to maintain its own conversation identifier."
+  },
+  "endpoint": {
+    "short_circuit": true,
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "mint": {
+        "conversation": "srv-new"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Served from the cache."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": []
+    },
+    "findings": []
+  },
+  "notes": "`ecma-430/32` with the reply produced by a layer, and the answer is the opposite one: the same configuration that mints `srv-new` there mints nothing here. That is the other half of `readings/51`'s reading, and the half that is easy to get backwards. Creation is not an obligation — §6.2.1 says *may*, and `/32` has to switch issuance on before anything happens at all — so a reply that carries no new identifier breaks no clause; what it avoids is worse. Minting is a write, and a deployment that persists what it minted commits on the path where its handler ran: a token created on a path the deployment never commits would be handed to the peer and forgotten, so the peer would name a conversation the end-point has no record of. Issuance is therefore the handler's turn — `Conformity::finish`, at the bottom of the stack — and a layer that answers above it gets the three idempotent obligations and not the fourth. An implementation that minted here would fail this case and would be making a choice about durability that ECMA-430 does not make for it."
+}

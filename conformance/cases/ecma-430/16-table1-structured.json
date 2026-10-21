@@ -1,0 +1,26 @@
+{
+  "title": "Table 1: format `structured`, subformat `json`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `structured`",
+    "note": "composed: Table 1 lists json, uri, xml and html as the known subformats of `structured`; `json` is one of them, so no finding is reported."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"structured\",\n  \"subformat\": \"json\",\n  \"content\": {\"intent\": \"weather_query\", \"city\": \"Austin\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "structured",
+      "subformat": "json",
+      "content": {
+        "intent": "weather_query",
+        "city": "Austin"
+      }
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"structured\",\"subformat\":\"json\",\"content\":{\"city\":\"Austin\",\"intent\":\"weather_query\"}}"
+  },
+  "notes": "canonical_json sorts the keys of structured content, so `city` precedes `intent` in the re-encoding while `input` keeps the order it arrived in."
+}

@@ -1,0 +1,43 @@
+[package]
+name = "nlipsy-protocol"
+description = "NLIP message model, and the rules ECMA-430 clause 5 states about it"
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# has to travel inside the package rather than sit at the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they are at the package root.
+readme = "README.md"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/nlipsy-protocol"
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+base64 = { workspace = true }
+ciborium = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+# CBOR is ECMA-432 §7.1's frame for NLIP over WebSocket, and the message model is the
+# same on either side of it: the feature adds two entry points and one error variant,
+# not a second model. It is off by default because a peer that speaks only ECMA-431
+# (HTTP, JSON) never encodes a CBOR byte string, and paying for a codec it cannot
+# reach is the kind of cost a default should not impose.
+[features]
+cbor = ["dep:ciborium"]
+
+# docs.rs builds with `--cfg docsrs` set and every feature on, which is what makes
+# `#[cfg_attr(docsrs, doc(cfg(...)))]` render on the `cbor` entry points.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

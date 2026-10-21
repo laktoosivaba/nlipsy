@@ -1,0 +1,44 @@
+{
+  "kind": "exchange",
+  "title": "The message that is itself a token is echoed, label and all",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Received."
+    }
+  },
+  "request": {
+    "label": "cred-1",
+    "format": "token",
+    "subformat": "authentication_9.2.3.5",
+    "content": "opaque-credential"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "authentication_9.2.3.5",
+          "content": "opaque-credential",
+          "label": "cred-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "Two readings, and the exchange is where both become visible. The first: §5 ¶2 calls the leading object of a message \"the first submessage\", so a message whose format is `token` *contains a token submessage* for §6.2's purposes and must be answered with it — the reference Python SDK's `create_token` emits exactly this message. The message-level case is `readings/36`, whose `tokens` list is empty because that list is about the `submessages` array; an implementation that echoed only that array would return nothing here and would be wrong. The second: the `label`. ECMA-430 defines none for a first submessage and the model carries it only because the reference SDK emits it, so nothing obliges an end-point to copy it — but §6.2 asks for \"the same submessage\", and a copy with the label is closer to the same than one without. The reply's own first submessage stays the end-point's answer, so the echo lands beside it rather than replacing it."
+}

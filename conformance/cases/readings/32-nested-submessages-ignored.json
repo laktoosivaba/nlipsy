@@ -1,0 +1,30 @@
+{
+  "title": "A submessage that carries its own submessages",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2",
+    "note": "composed: §5.2 gives a submessage four fields and no submessages field, so the nesting is an undefined field and is ignored — the message is two submessages deep on the wire and one deep in the model."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\n      \"format\": \"text\",\n      \"subformat\": \"english\",\n      \"content\": \"outer\",\n      \"submessages\": [\n        {\"format\": \"text\", \"subformat\": \"english\", \"content\": \"inner\"}\n      ]\n    }\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "text",
+          "subformat": "english",
+          "content": "outer"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma? outer",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"outer\"}]}"
+  },
+  "notes": "The nested text is dropped, so it does not appear in `text` either. An implementation that recursed would extract \"What is Ecma? outer inner\"."
+}

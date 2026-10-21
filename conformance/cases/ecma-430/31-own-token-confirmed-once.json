@@ -1,0 +1,53 @@
+{
+  "kind": "exchange",
+  "title": "The end-point's own token is not echoed as the peer's, and is confirmed exactly once",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2, 6.2.1",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "own": [
+        "srv-1"
+      ],
+      "issued": {
+        "conversation": "srv-1"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Ecma International."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "And what does TC56 do?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation",
+        "content": "srv-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation",
+          "content": "srv-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "The two halves of the clause meet here and must not cancel out. §6.2's exception removes this token from the echo, because the end-point created it; §6.2.1's \"maintain the concept of a continuous conversation\" puts it back, because the end-point is still confirming the identifier it issued. Doing only the first would leave the peer holding a conversation identifier the server no longer names; doing both without the exception would return it twice. Under this reading the observable requirement is *exactly once*, which is what this case asserts."
+}

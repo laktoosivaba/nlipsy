@@ -1,0 +1,26 @@
+{
+  "title": "Sixty-four-bit integers nested inside structured content",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "Annex A, property Content; §5 (\"as defined in ECMA-404\")",
+    "note": "composed: ECMA-404 fixes the grammar of a number and leaves its precision to the implementation, and §5 inherits that by naming ECMA-404 for its types. This case asks that 64-bit integers nested inside a structured content survive a decode and a re-encode exactly — u64::MAX and i64::MIN, both past 2^53 and both inside 64 bits. It is what a JavaScript implementation loses by default, because every JSON number there is a double, and a second implementation has to carry such values as something wider than a double at every depth. The corpus deliberately asks for nothing beyond 64 bits: `ecma-432/12` is where that boundary is recorded."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"structured\",\n  \"subformat\": \"json\",\n  \"content\": {\n    \"id\": 18446744073709551615,\n    \"offset\": -9223372036854775808\n  }\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "structured",
+      "subformat": "json",
+      "content": {
+        "id": 18446744073709551615,
+        "offset": -9223372036854775808
+      }
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"structured\",\"subformat\":\"json\",\"content\":{\"id\":18446744073709551615,\"offset\":-9223372036854775808}}"
+  },
+  "notes": "`ecma-432/12` is the corpus's other wide integer and it is the message's own content, which crosses a language boundary as a number. This one is *nested*, so it crosses as part of the structured value — and an implementation whose structured content is a parsed JavaScript object loses both digits before anything in the protocol sees them. `canonical_json` is where the case bites: the two digit strings must come back character for character, so an implementation that rounded 18446744073709551615 to 18446744073709552000 fails here and passes everything else."
+}

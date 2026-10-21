@@ -1,0 +1,145 @@
+[package]
+name = "nlipsy"
+description = "NLIP (ECMA-430) for Rust: the facade over the nlipsy-* crates"
+publish = true
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# travels inside the package rather than being read from the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they sit at the package root.
+readme = "README.md"
+# The one piece of `[workspace.package]` this crate does not inherit. The workspace
+# value names docs.rs/nlipsy-protocol, which is a different crate's page; a facade
+# whose `documentation` link leads to the crate it wraps sends every reader to the
+# wrong index.
+documentation = "https://docs.rs/nlipsy"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+# One line in a consumer's manifest, whichever pieces of NLIP it ends up using. That
+# is the whole of what this crate does, and every dependency is optional because a
+# facade with no features on must cost nothing to depend on.
+[dependencies]
+nlipsy-protocol = { workspace = true, optional = true }
+nlipsy-core = { workspace = true, optional = true }
+nlipsy-http = { workspace = true, optional = true }
+# `default-features = false`, and that line is what makes `http-client-hyper` below
+# worth having. `nlipsy-http-client`'s default feature is `reqwest`, whose TLS pulls
+# rustls-platform-verifier — `jni` on Android, aws-lc-sys with cmake everywhere — and a
+# feature cannot remove a dependency, so a facade that took the defaults could never
+# offer a build without it. Taking none and naming the transport in each feature below
+# means `features = ["http-client"]` is still reqwest and nothing changes for anyone who
+# already wrote it, while `features = ["http-client-hyper"]` really is the graph the FFI
+# build needs.
+nlipsy-http-client = { workspace = true, optional = true, default-features = false }
+nlipsy-server = { workspace = true, optional = true }
+
+# No default features, as jsonrpsee has none: `nlipsy = "0.1"` on its own compiles an
+# empty crate, and every module is opted into by name. A default would have to guess
+# which binding a consumer wants, and guessing wrong is a dependency they cannot
+# remove without turning `default-features` off — the opposite of what a facade is
+# for.
+#
+# Features are named after what they give you (`protocol`), not after the crate
+# behind them (`nlipsy-protocol`). jsonrpsee has to spell some of its features
+# `jsonrpsee-http-client` because a feature and an optional dependency share one
+# namespace unless the dependency is written `dep:`; `dep:` (Rust 1.60, and this
+# workspace is 2024 edition) removes that constraint, so the name can describe the
+# module a consumer gets rather than the package it comes from.
+#
+# Only features whose crate exists are declared. `ws` and `amqp` are named in the
+# README as the shape this table is expected to grow into: a feature that enables
+# nothing is indistinguishable from one that is broken, and a consumer who writes
+# `features = ["ws"]` today should get an error, not silence. The bare `http` of the
+# earlier table is gone rather than unimplemented — ECMA-431 arrived as two crates,
+# a client and a server, so the feature that names it is `http-client` beside a
+# `server`, which is also what jsonrpsee ended up with for the same reason: the two
+# halves of a binding are deployed apart and a client has no reason to compile a
+# router.
+#
+# The shape below is jsonrpsee's `[features]` table with its names ours:
+# a `*-core` feature per role turning on the half of `nlipsy-core` that role needs, a
+# transport feature per binding, and a role feature (`client`, `server`) that turns on
+# every transport of that role. `client` has one member today and is still declared,
+# because it is the name a consumer should write when they mean "a client agent, over
+# whatever this crate speaks" — and the day the WebSocket binding lands, that consumer
+# gains it without editing anything.
+[features]
+protocol = ["dep:nlipsy-protocol"]
+
+client-core = ["protocol", "dep:nlipsy-core", "nlipsy-core/client"]
+# `dep:nlipsy-http` on *both* binding features, and `nlipsy::http` behind either of
+# them, because ECMA-431 §6 as values is what the two ends of the binding share: the
+# client reads a status and a `Retry-After`, the server writes them. There is no
+# `http` feature of its own for the same reason there is no bare `core` one — a
+# consumer asks for the role they are playing, and the values come with it.
+http-client = ["client-core", "dep:nlipsy-http-client", "dep:nlipsy-http", "nlipsy-http-client/reqwest"]
+# The same binding over a different stack, and the one feature in this table named after
+# a crate rather than after what it gives you. The exception is deliberate: the two
+# transports differ in nothing a consumer can describe in protocol terms — same `POST`,
+# same media type, same `Retry-After`, same `TransportError` cases — and in exactly one
+# thing a consumer can describe in build terms, which is whose trust store verifies the
+# peer and what has to be in the toolchain to compile it. `nlipsy-http-client`'s own
+# documentation has the measurement; `make check-mobile-graph` is the gate.
+#
+# It brings the module and the values the way `http-client` does, and deliberately does
+# **not** imply it: naming both is supported and yields `nlipsy::http_client` once, with
+# both transports in it, but asking for this one alone compiles no reqwest at all. That
+# is the whole point, and it is why the two features sit beside each other instead of
+# one enabling the other.
+http-client-hyper = ["client-core", "dep:nlipsy-http-client", "dep:nlipsy-http", "nlipsy-http-client/hyper"]
+# `http-client` and not `http-client-hyper`: this feature means "every client *binding*
+# there is", and the hyper transport is not one — it is the same ECMA-431 §6 exchange
+# over another stack. A `client` that turned on both would put two TLS providers and a C
+# toolchain into the build of everyone who asked for the role.
+client = ["http-client"]
+
+server-core = ["protocol", "dep:nlipsy-core", "nlipsy-core/server"]
+server = ["server-core", "dep:nlipsy-server", "dep:nlipsy-http"]
+
+# Feature unification makes the `protocol` entry the only correct spelling: `cbor`
+# without it would enable a feature of a dependency that is not in the build.
+#
+# The four `?` entries are the ones that matter, and they are weak on purpose.
+# `nlipsy-core?/cbor` means "if `nlipsy-core` is in the build, turn its `cbor` on" and
+# — unlike `nlipsy-core/cbor` — does *not* pull the crate in. Without them, `cbor`
+# would reach the message model and stop: `nlipsy-core::encode_request` and
+# `decode_reply` compile a panicking arm for `Wire::Cbor` unless *their own* `cbor`
+# feature is on (it forwards to `nlipsy-protocol/cbor`, which is where the codec is),
+# so a consumer who wrote `features = ["client", "cbor"]` would get a message model
+# that speaks CBOR behind a client that panics on it. Cargo's weak syntax is what lets
+# one feature mean "everywhere it applies" without also meaning "everywhere".
+cbor = [
+    "protocol",
+    "nlipsy-protocol/cbor",
+    "nlipsy-core?/cbor",
+    "nlipsy-http?/cbor",
+    "nlipsy-http-client?/cbor",
+    "nlipsy-server?/cbor",
+]
+
+# Every NLIP *capability*, which is why `http-client-hyper` is not in it for the reason
+# it is not in `client`: a second way to build one binding is not a third thing the
+# crate can do, and a consumer who writes `full` is asking for the protocol's whole
+# surface rather than for two TLS stacks. `--all-features` does compile both, which is
+# what keeps the pair checked — clippy, the tests, rustdoc and cargo-semver-checks all
+# run with it.
+full = ["client", "server", "cbor"]
+
+# docs.rs builds with `--cfg docsrs` and every feature on, which is what makes the
+# `#[cfg_attr(docsrs, doc(cfg(...)))]` on each re-export render as the "Available on
+# crate feature" banner. Without it the facade's index page is empty — the modules
+# are all behind features.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

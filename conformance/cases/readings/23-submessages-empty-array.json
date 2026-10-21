@@ -1,0 +1,22 @@
+{
+  "title": "An empty submessages array",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.5; Ecma TR/113 §11.3 Figures 9-11",
+    "note": "composed: TR/113's figures all send `\"submessages\": []`. It decodes to no submessages, and canonical_json omits the field entirely — §5.1.5 makes it optional and an empty array carries nothing."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": []\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  }
+}

@@ -1,0 +1,290 @@
+# The repository declares its own workspace root on purpose. A package with no
+# `[workspace]` above it is captured by the nearest workspace root Cargo finds
+# further up the filesystem — which would silently change which lockfile and which
+# feature unification it is built with. Declaring the root here means the members
+# below are captured by this workspace and no other, wherever the checkout sits.
+#
+# The root is a virtual manifest: no package of its own, so `--workspace` is what
+# reaches the members and there is no root crate for a bare `cargo test` to stop at.
+[workspace]
+members = [
+    "crates/nlipsy-protocol",
+    "crates/nlipsy-core",
+    "crates/nlipsy-http",
+    "crates/nlipsy-http-client",
+    "crates/nlipsy-server",
+    "crates/nlipsy",
+    "crates/nlipsy-component",
+    "crates/conformance",
+    # An example, and a workspace member on purpose: it is a `cdylib` for
+    # `wasm32-wasip3` whose `rlib` half `make check` type-checks on the host, so a break
+    # in it is caught by the same gate as a break anywhere else rather than on the day
+    # somebody builds the composition.
+    "examples/echo-endpoint",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.2"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/laktoosivaba/nlipsy"
+homepage = "https://github.com/laktoosivaba/nlipsy"
+keywords = ["nlip", "ecma-430", "protocol", "json", "agent"]
+categories = ["encoding", "network-programming"]
+
+# Versions are pinned once, here, rather than per member. ECMA-431…433 each add a
+# binding over the same message model, and a second member that picked its own
+# `serde_json` would split feature unification against the crate it depends on —
+# the failure this table exists to make impossible.
+[workspace.dependencies]
+# Internal crates, path plus version as jsonrpsee does it: the path is what a
+# workspace build uses, the version is what the published facade must be able to
+# resolve once the crates are on crates.io.
+nlipsy-protocol = { path = "crates/nlipsy-protocol", version = "0.1.2" }
+nlipsy-core = { path = "crates/nlipsy-core", version = "0.1.2" }
+nlipsy-http = { path = "crates/nlipsy-http", version = "0.1.2" }
+# `default-features = false` on this one alone, and it is here rather than in the
+# facade's manifest because cargo refuses to let a member turn a workspace pin's
+# defaults off ("`default-features = false` cannot override workspace's
+# `default-features`"). The default of `nlipsy-http-client` is its reqwest transport,
+# whose TLS pulls rustls-platform-verifier — `jni` on Android, aws-lc-sys with cmake
+# everywhere — and the facade's whole reason for having a second transport feature is to
+# be able to offer a build without it. So the pin brings neither transport and every
+# dependent names the one it wants: `nlipsy`'s `http-client` names `reqwest` and its
+# `http-client-hyper` names `hyper`. A member added later that forgets to name one gets
+# a crate with no transport in it, which is a compile error at the first `HttpTransport`
+# and not a silent extra dependency — the right way round.
+nlipsy-http-client = { path = "crates/nlipsy-http-client", version = "0.1.2", default-features = false }
+nlipsy-server = { path = "crates/nlipsy-server", version = "0.1.2" }
+
+# The guest of the interface contract in `wit/`. `nlipsy-component` is the one member
+# that compiles it, and it is `publish = false`, but the version is pinned here with the
+# rest so that there is one table to read a dependency out of. 0.62 is the first release
+# whose macro honours the WIT's own `async func` markers per function rather than an
+# all-or-nothing `async: true`, which is why no `async:` option appears anywhere in this
+# workspace and why the contract's mix of `func` and `async func` is what gets built.
+wit-bindgen = "0.62"
+# The host the corpus's `component` mode runs the built component in, behind
+# `nlipsy-conformance`'s optional `component` feature so that `make check` never compiles
+# it. 48.x rather than the 49 release candidate, because 48 is the first release whose
+# `wasmtime_wasi::p3` module implements WASI **0.3** — `wasi:cli@0.3.0` and
+# `wasi:clocks@0.3.0`, the only interfaces the `wasm32-wasip3` artefact imports — and
+# which unified the `WasiCtx`/`WasiView` structures so that one host state serves it. It
+# is also the `wasmtime` CLI this workspace's artefact is run under by hand, where the
+# 0.3 world is reached with `-S p3`.
+#
+# `default-features = false`: the defaults are `p1` and `p2` — preview1 through wiggle
+# and WASI 0.2 — and nothing here links either. The consumer turns on what it needs, and
+# `nlipsy-conformance`'s `component` feature names `wasmtime-wasi/p3`, which brings
+# `wasmtime/component-model-async` (and with it `async` and `component-model`) along.
+wasmtime = "48.0.6"
+wasmtime-wasi = { version = "48.0.6", default-features = false }
+# The other half of the same host, and it is here because the *component* carries the
+# ECMA-431 §6 binding now: the artefact exports `wasi:http/handler@0.3.0` and imports
+# `wasi:http/client@0.3.0`, so a host that runs it has to provide `wasi:http` rather than
+# wrap it. `p3::add_to_linker` satisfies the client, `p3::bindings::Service::handle`
+# calls the handler.
+#
+# `default-features = false` drops `p2` — the 0.2 world, which nothing here links — and
+# `default-send-request` is named back, because it is the *outgoing* half: it is what
+# supplies `default_hooks` and the sender behind `wasi:http/client.send`, and without it
+# `client.call` has nowhere to send. It brings rustls, which is the same TLS stack
+# `nlipsy-http-client` already pins, so the graph gains no second one.
+wasmtime-wasi-http = { version = "48.0.6", default-features = false, features = ["default-send-request"] }
+# The reactor `wasmtime-wasi-http`'s default outgoing sender needs, and the runtime
+# `nlipsy-http-client`'s `hyper` transport is driven by. Two members name it and neither
+# of them starts a runtime: `nlipsy-conformance`'s `component` feature drives the corpus
+# with a park/unpark `block_on` of its own — a corpus runner that pulled in a
+# work-stealing executor to call `decode` would be measuring the executor — and the
+# `hyper` transport needs `net` and `time` and nothing more, because **the runtime
+# flavour is the caller's**: a `HyperTransport` is built inside whatever reactor the
+# consumer already has (an FFI host's single-threaded one, as often as not), and the
+# crate neither spawns nor blocks.
+#
+# `rt-multi-thread` is therefore on this line for `wasmtime-wasi-http`'s sake and not
+# for the client's, and that costs the client nothing to be wrong about in only one
+# direction: cargo unifies features additively, so a consumer who compiles both members
+# gets the union and a consumer who compiles only `nlipsy-http-client` gets whatever
+# *its* own graph asks for — hyper-util's `tokio` feature (`tokio/rt`, `tokio/time`) and
+# its `client-legacy` (`tokio/net`, `tokio/sync`). Naming the pin here rather than
+# per-member is what keeps the floor in one table; it can never subtract.
+tokio = { version = "1.49.1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
+
+# `base64` is not optional: base64 is the JSON spelling of a byte string (ECMA-430
+# §6.4, ECMA-432 §7.2), and JSON is the one encoding the model always supports.
+# `ciborium` is, because CBOR is one binding's frame (ECMA-432 §7.1) rather than the
+# message model, and a member that only ever speaks JSON should not compile it.
+base64 = "0.22.1"
+ciborium = "0.2.2"
+# `http` is here for one type: `http::Extensions`, the type-map `nlipsy-core::Context`
+# carries so that a deployment can hand its own state to an endpoint without the core
+# ever naming it. jsonrpsee makes the same trade for the same reason — it re-exports
+# `http::Extensions` from `core/src/server/mod.rs` and every request carries one — and
+# the alternative is writing a `TypeMap` of our own. The crate is the HTTP *types*, not
+# a client or a server: no I/O, no tokio, and it compiles for wasm32.
+http = "1.5.0"
+serde = "1.0.229"
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+# The one member with a socket in it. `default-features = false` plus `rustls` is what
+# keeps the graph to one TLS stack: 0.13 renamed 0.12's `rustls-tls` and made
+# `default-tls` an alias for it, so there is no native-tls in the build and no
+# webpki-roots variant to choose between. Verification goes through
+# rustls-platform-verifier, which reads the SYSTEM trust store — a deployment that
+# trusts an internal CA has already told its machine about it, and a bundle compiled
+# into the binary would not know. `json` is deliberately off: `nlipsy-core` encodes the
+# request and the reply comes back as bytes, so reqwest's serde integration would be a
+# second codec in the build that nothing calls.
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] }
+
+# `nlipsy-http-client`'s **second** transport, and the five lines below are one decision.
+# The crate is going into an Android and an iOS app over FFI, and the pin above cannot
+# go there: reqwest 0.13's `rustls` *and* its `rustls-no-provider` both depend on
+# rustls-platform-verifier unconditionally, which on `aarch64-linux-android` means `jni`
+# plus a Kotlin companion library the app has to carry, and on every target means
+# aws-lc-sys — a vendored BoringSSL built by cmake. Neither is a thing an FFI consumer
+# can switch off, because a feature cannot remove a dependency.
+#
+# hyper over hyper-rustls on the `ring` provider, with Mozilla's root bundle compiled
+# in, is the same `POST` with `cc`, `ring` and `webpki-roots` under it and nothing else
+# on both of those targets. That is measured rather than asserted:
+# `make check-mobile-graph` reads the tree for each target back and fails on any of
+# `jni`, `rustls-platform-verifier`, `aws-lc`, `cmake`, `security-framework`, `openssl`
+# or `native-tls`. It is also the whole of what the transport gives up — no system trust
+# store, so no enterprise roots and no platform pinning — which the crate's README
+# states beside the table.
+#
+# `default-features = false` on **every** line of this block and `aws-lc-rs` on none of
+# them, because the defaults are precisely the graph it exists to avoid: hyper-rustls's
+# are `native-tokio` + `aws-lc-rs`, and rustls's are `aws-lc-rs` + `prefer-post-quantum`.
+# The two providers can still both be in a build — a consumer who takes `reqwest` and
+# `hyper` together gets ring from here and aws-lc-rs through reqwest's verifier, because
+# feature unification is additive — which is why the transport names its provider
+# explicitly through `ClientConfig::builder_with_provider` and never the implicit
+# `ClientConfig::builder`; see the comment on that line.
+#
+# hyper: the client half of HTTP/1.1 and nothing else. No `http2`, because ECMA-431 §6
+# is one `POST` per exchange and a multiplexed connection buys a conversation nothing —
+# a conversation here is a sequence of independent requests — and no `server`, which is
+# `nlipsy-server`'s business through axum.
+hyper = { version = "1", default-features = false, features = ["http1", "client"] }
+# The connection pool, the connector and the Tokio glue, which hyper itself has none of:
+# `client-legacy` is the pooling `Client` (the only client hyper-util has — the name is
+# its history, not a deprecation), `client` the types under it, `http1` the protocol to
+# match the line above, and `tokio` the `TokioExecutor` the pool is spawned on and the
+# `TokioIo` the connector returns. `client-legacy` is also what carries
+# `HttpConnector::set_connect_timeout`, which is how the connect budget this binding
+# promises is actually applied — hyper-util's `Client` has no timeout of its own.
+hyper-util = { version = "0.1", default-features = false, features = ["client", "client-legacy", "http1", "tokio"] }
+# TLS for that connector. `ring` rather than the default `aws-lc-rs` is the point of the
+# block; `webpki-tokio` is hyper-rustls's name for "the compiled-in Mozilla bundle" and
+# `webpki-roots` is the optional dependency that implements it, both named so the
+# manifest reads as what it turns on rather than as an alias. `tls12` reaches
+# tokio-rustls as well as rustls, so it is not the same flag as rustls's own below.
+# `logging` routes rustls's own diagnostics through `log` instead of dropping them, which
+# is what makes a handshake failure in an app's logcat say why. `http1` to match hyper.
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "ring", "webpki-roots", "webpki-tokio", "tls12", "logging"] }
+# And rustls itself, named directly because the transport builds its own `ClientConfig`
+# rather than taking one of hyper-rustls's shorthands: `ring` is the provider, `std` is
+# what `builder_with_provider` and `RootCertStore` need, `tls12` keeps TLS 1.2 reachable
+# for an end-point that has not moved yet, `logging` matches the line above.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+# The roots themselves: Mozilla's CA list as data, `CDLA-Permissive-2.0`, no code and no
+# dependency but `rustls-pki-types`. Frozen at build time, which is the trade — a
+# deployment that needs the platform's store takes the reqwest transport instead.
+webpki-roots = "1"
+# The connector trait, named directly for one reason: the transport's own connector — the
+# enum that is either hyper-util's `HttpConnector` or a caller's `Dialer` — has to
+# *implement* `tower_service::Service<Uri>`, because that is the bound both hyper-util's
+# `Client` and hyper-rustls's `HttpsConnector` put on whatever they wrap, and neither
+# crate re-exports the trait. It is not a choice between alternatives: there is no other
+# spelling of that bound. It costs the graph nothing, because hyper-util and hyper-rustls
+# already depend on this exact crate (0.3.3 in the lockfile) — `make check-mobile-graph`
+# counts the same crates with it as without. Not `tower`: `BoxCloneService` would have
+# been the other way to keep `HyperTransport` free of a type parameter, and an enum of two
+# connectors does that with no new crate at all.
+tower-service = "0.3.3"
+
+# The other member with a socket near it — `nlipsy-server`'s HTTP framework. Pinned to
+# the major its first consumer already serves with, because that deployment hands the
+# router it gets from this workspace straight to its own `axum::serve` and two majors
+# of axum do not share a `Router`. `default-features = false` keeps `json`, `form`,
+# `query` and the rest of the extractor zoo out of a build whose body is one NLIP
+# message: the one feature back is `tokio`, which is what gates `ConnectInfo` and
+# `into_make_service_with_connect_info` — the peer address a deployment throttles and
+# audits on.
+axum = { version = "0.8.9", default-features = false, features = ["tokio"] }
+# For `LengthLimitError` in `nlipsy-server`, and for collecting a `wasi:http` response
+# body in the conformance host's HTTP-level tests: it is what tells "the peer sent too
+# much" from "the connection broke", and the two are a 413 and a 500. axum already builds
+# on it.
+#
+# A third consumer now, reusing this pin rather than adding one: `nlipsy-http-client`'s
+# `hyper` transport sends `Full<Bytes>` — a body of known length, which is what gives the
+# request its `Content-Length` — and collects the reply with `BodyExt::collect`.
+http-body-util = "0.1.5"
+# The `Body` trait itself, for one type in the conformance host and nothing else: a
+# request body that hands over a prefix and then fails, which is how a peer that stops
+# mid-send looks to a runtime. `http-body-util` has no such shape — `Limited` refuses a
+# whole frame rather than truncating one — and the case it drives is a request nobody
+# finished sending, which must not be answered as if it had been. Already in this
+# lockfile, under `http-body-util` and `axum` both, so it costs the graph nothing.
+http-body = "1.1.0"
+# The byte buffer `http-body` hands a collected body back in, and nothing else. It is
+# already in this lockfile — hyper and axum both build on it — so it costs the graph
+# nothing; `nlipsy-conformance`'s `component` feature is the only member that names it.
+bytes = "1.12.0"
+# One direction of `Retry-After`. RFC 9110 §10.2.3 gives the header two forms —
+# delay-seconds and an HTTP-date — and the second is an IMF-fixdate parser with a
+# leap-second rule and two obsolete formats behind it, which is not something
+# `nlipsy-http` should be writing itself. httpdate is that parser and nothing else:
+# `MIT OR Apache-2.0`, zero dependencies, no clock of its own (it converts to and from
+# a `SystemTime` the caller supplies), and it compiles for `wasm32`. It is already in
+# this lockfile — hyper writes its `Date` header with it — so it costs the graph
+# nothing. Not `chrono` or `time`: both bring a time *zone* database and a clock for a
+# header whose grammar fixes GMT.
+httpdate = "1.0.3"
+# The runtime crates' log. Not a subscriber — which sink the records go to is the
+# deployment's choice, and `nlipsy-core` has no `tracing` at all.
+tracing = "0.1.44"
+# The correlator `nlipsy-server` mints when the peer brought none, in the spelling the
+# reference server used. `v4` only: no clock-based or name-based variant is wanted.
+uuid = { version = "1.26.1", features = ["v4"] }
+
+[workspace.lints.rust]
+# Decoding JSON into an owned model needs nothing the type system cannot express;
+# `forbid` rather than `deny` so a member cannot opt back in with an attribute.
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+# `priority = -1` so a member may still allow one lint out of the group without
+# having to allow the group. Cargo applies lower priorities first.
+rust_2024_compatibility = { level = "warn", priority = -1 }
+# Every public item is documented, so the lint has nothing to report today and exists
+# to keep it that way: the crate's README is its documentation, and an item that
+# reaches the public API without prose reaches docs.rs without prose. `warn` rather
+# than `deny` because `make check` runs clippy with `-D warnings`, which turns it into
+# an error where it matters without making a half-written local edit unbuildable.
+missing_docs = "warn"
+
+# The component's build profile, and it is here because Cargo reads `[profile.*]` from
+# the workspace root and nowhere else — a `[profile]` table in a member's manifest is
+# ignored with a warning. `release` is left exactly as it was: this one is asked for by
+# name, `cargo build -p nlipsy-component --profile component --target wasm32-wasip3`, so
+# nothing else in the workspace is built differently because it exists.
+#
+# The five settings are a wasm release profile, and each one is here for a reason that
+# is written next to it rather than inherited. `opt-level = "z"` and `lto` are size;
+# `codegen-units = 1` is size and lets LTO see the whole crate graph; `strip` removes the
+# name section, which jco does not need and which is a fifth of the raw artefact.
+# `panic = "abort"` is not only size: a wasm component has no unwinder, so a panic
+# crossing the canonical ABI would kill an instance that may be serving other exchanges
+# concurrently — the guest is written so that no host-supplied value can reach one.
+[profile.component]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

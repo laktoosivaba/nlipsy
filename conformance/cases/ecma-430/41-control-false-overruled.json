@@ -1,0 +1,36 @@
+{
+  "kind": "exchange",
+  "title": "The end-point's own reply says control false, and clause 6 overrules it",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.3",
+    "quote": "If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true."
+  },
+  "endpoint": {
+    "reply": {
+      "control": false,
+      "format": "text",
+      "subformat": "english",
+      "content": "pong"
+    }
+  },
+  "request": {
+    "control": true,
+    "format": "text",
+    "subformat": "english",
+    "content": "ping"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "control": true,
+      "messagetype": null,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      }
+    },
+    "findings": []
+  },
+  "notes": "§6.3 has no exception; the boolean is overwritten, the `messagetype` is not. The clause reads \"If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true\", and from the peer's side \"the end-point\" is the whole stack, handler included — so a handler that writes `\"control\": false` in answer to a control request does not get to send it. The wrapper already censors on §6.2, where it adds tokens the handler did not write, and on clause 5, where it replaces the reply outright; §6.3 is the weakest of the three. `messagetype` is a different question and is filled rather than overwritten: §6.3 names the boolean and no other field, and a handler's own value — `Error`, say — classifies its answer rather than claiming anything about control-ness, which is what the replacement error message of `readings/46` relies on. Here the request carried no `MessageType` at all, so none is invented. No conforming handler produces this reply; the case exists so that an implementation which composes around the handler instead is failed by the corpus rather than by a peer. Compare `readings/22`, where the two spellings of control disagree inside one message rather than between two."
+}

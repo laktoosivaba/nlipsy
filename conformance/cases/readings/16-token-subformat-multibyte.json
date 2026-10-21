@@ -1,0 +1,36 @@
+{
+  "title": "Token subformat of multi-byte characters",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `token`), §6.2",
+    "note": "composed: five euro signs are fifteen bytes, so the byte offset of the reserved prefix `authentication` (fourteen) falls inside the fifth character. A prefix test that slices by byte offset panics here; the answer is that this is not one of the reserved prefixes."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"€€€€€\", \"content\": \"opaque\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "€€€€€",
+          "content": "opaque"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "tokens": [
+      {
+        "subformat": "€€€€€",
+        "content": "opaque",
+        "kind": "other"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"€€€€€\",\"content\":\"opaque\"}]}"
+  }
+}

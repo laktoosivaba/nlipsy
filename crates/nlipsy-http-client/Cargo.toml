@@ -1,0 +1,165 @@
+[package]
+name = "nlipsy-http-client"
+description = "The ECMA-431 client binding of NLIP: one HTTP exchange with a peer end-point, over reqwest or hyper"
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# has to travel inside the package rather than sit at the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they are at the package root.
+readme = "README.md"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/nlipsy-http-client"
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The outbound half of the protocol — `Transport`, `Client`, `Reply`, `Body`, the
+# record/replay machinery — with no socket in it. This crate is implementations of that
+# trait and nothing else, which is the split `runtime-plan.md` §2 draws: a binding is a
+# crate, and the core is what every binding shares. It is also where `http` comes from:
+# the `HeaderMap` this crate re-exports is `nlipsy_core::http`'s, which is what lets one
+# spelling serve both transports and stay exported in a build with neither.
+nlipsy-core = { workspace = true, features = ["client"] }
+# ECMA-431 §6 as values: the path, the correlator header, the media type, the TR/113
+# §11.1 chat turn, and the `Retry-After` reader both transports use on the way back —
+# one reader between them, so that two implementations cannot pace the same end-point
+# differently. Shared with
+# `nlipsy-server`, which is the point — the client that reads a header and the server
+# that writes it must not hold two copies of the same clause.
+nlipsy-http = { workspace = true }
+# The message model. Every signature reachable from this crate names one — the
+# re-exported `request` returns a `Message`, `Client::send` takes one — so a consumer
+# has to resolve the same version, and the recorded-fixture test builds one directly.
+nlipsy-protocol = { workspace = true }
+# `rustls`, not the `rustls-tls` of 0.12: 0.13 renamed the feature, and `default-tls`
+# is now an alias for it. Verification goes through rustls-platform-verifier, so it
+# reads the SYSTEM trust store — the same path a deployment's own CA-managed peers
+# take, and the reason a container image carrying this client needs ca-certificates.
+# There is no webpki-roots variant to choose between any more. `json` is left off: the
+# request body is encoded by `nlipsy-core` and the reply is read as bytes, so nothing
+# here uses reqwest's serde integration.
+#
+# Optional since 2026-10-04, and still the default. It is optional because that same
+# platform verifier is not a thing an Android or an iOS build can carry — see the
+# `hyper` feature below and the root manifest's block of pins — and a feature cannot
+# remove a dependency, so the only way to offer a build without it is to make this one
+# a feature too.
+reqwest = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+# The second transport's stack. Every line is optional and every line is off unless
+# `hyper` is on; the root manifest says why each one carries the features it does and
+# why `default-features = false` is on all of them.
+hyper = { workspace = true, optional = true }
+hyper-util = { workspace = true, optional = true }
+hyper-rustls = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+webpki-roots = { workspace = true, optional = true }
+# `Full<Bytes>` on the way out — a body of known length, which is what puts
+# `Content-Length` on the request — and `BodyExt::collect` on the way back. `Bytes`
+# itself is not a dependency: hyper re-exports it as `hyper::body::Bytes`, and naming it
+# through hyper is what guarantees the two agree about the version.
+http-body-util = { workspace = true, optional = true }
+# Named for two items and for the floor. The items arrived with `Dialer` (0.1.2): a
+# caller's dialer hands back a stream in `tokio::io::AsyncRead` + `AsyncWrite` terms —
+# the traits a `tokio::net::TcpStream` and a userspace tunnel's socket adapter already
+# implement — and the connect budget around `dial` is a `tokio::time::timeout`, because
+# on that path there is no `HttpConnector` to apply it. The two I/O traits need no
+# feature at all (only their extension traits are behind `io-util`); the timeout needs
+# `time`, which the pin already states. The default path is untouched by either: its
+# budget still goes through `HttpConnector::set_connect_timeout`, and the executor is
+# still hyper-util's `TokioExecutor`. What the pin buys beyond that is that `tokio/net`
+# and `tokio/time` are stated in the manifest of the crate that actually needs a socket
+# and a clock, instead of being inherited from whichever features hyper-util happens to
+# name next. **The runtime itself is the caller's**: this crate starts none, spawns
+# nothing of its own beyond hyper-util's connection tasks, and a `HyperTransport` is
+# built inside whatever reactor the consumer already has.
+tokio = { workspace = true, optional = true }
+# The `Service<Uri>` trait the transport's connector implements, so that one concrete
+# connector can be either hyper-util's `HttpConnector` or a caller's `Dialer`. Already in
+# the graph under hyper-util and hyper-rustls; the root manifest says why it has to be
+# named here at all.
+tower-service = { workspace = true, optional = true }
+
+[features]
+# Two transports, two features, and reqwest is the default so that nothing a consumer
+# already wrote changes: `nlipsy-http-client = "0.1"` is still `HttpTransport` over
+# reqwest. `default-features = false, features = ["hyper"]` is the FFI build — an
+# Android or an iOS app over the `cc`/`ring`/`webpki-roots` graph `make
+# check-mobile-graph` measures — and both at once is a build with both types in it,
+# which is what the `--features hyper` line of `make check-features` compiles.
+#
+# The features are named by the stack rather than by what it gives you, which is the
+# opposite of the facade's rule and deliberate here: the crate's one existing type is
+# `HttpTransport` *over reqwest* and says so in its own description, so "reqwest" and
+# "hyper" are already the names a reader of this crate has. A consumer who wants to ask
+# for a property instead — "no system trust store, no C toolchain" — asks the facade,
+# where the feature is `http-client-hyper`.
+default = ["reqwest"]
+reqwest = ["dep:reqwest"]
+hyper = [
+    "dep:hyper",
+    "dep:hyper-util",
+    "dep:hyper-rustls",
+    "dep:rustls",
+    "dep:webpki-roots",
+    "dep:http-body-util",
+    "dep:tokio",
+    "dep:tower-service",
+]
+
+# Forwarded rather than declared, exactly as `nlipsy-core` forwards it: whether
+# `Wire::Cbor` can be encoded at all is a property of the message model (ECMA-432
+# §7.1). ECMA-431 §6 carries JSON, so nothing in this crate reads the flag — it is here
+# so that a consumer choosing its wire does not have to name the core crate separately
+# to turn the codec on.
+cbor = ["nlipsy-core/cbor", "nlipsy-http/cbor"]
+
+# `all-features` so docs.rs shows every build; `--cfg docsrs` so that each feature-gated
+# item's `#[cfg_attr(docsrs, doc(cfg(...)))]` banner renders. Both transports are gated
+# now, so the banners are what tell a reader of the docs.rs page which feature
+# `HttpTransport` is behind and which one `HyperTransport` is.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dev-dependencies]
+# `Scripted` — the transport that answers from a script — stays in the core behind its
+# `testing` feature, because the crates that need it are elsewhere. Here it is what the
+# two `request` tests send through a `Client` without a socket.
+nlipsy-core = { workspace = true, features = ["client", "testing"] }
+# The tests assert on what was sent as JSON, and on the canonical TR/113 §11.1 shape.
+serde_json = { workspace = true }
+# The recorded fixture round trip writes a real file.
+tempfile = "3.27.0"
+# `macros` and `io-util` are what the transports' own tests need and the crate does not
+# (`net` and `time` it does, behind `hyper`, which is the optional pin above): a
+# `TcpListener` on loopback and `AsyncReadExt` / `AsyncWriteExt` over the accepted
+# socket, so that one hand-written HTTP/1.1 response can prove what actually goes onto
+# the wire — the correlator header, `Retry-After`, a body that is not a message, and
+# the two halves of `TransportError`. One responder, two mirrored suites, which is how
+# the two transports are held to the same bytes. A server framework would be a heavier
+# dependency than the thing under test. `io-util` is also what carries
+# `tokio::io::duplex`, the in-memory pipe the `Dialer` tests hand the transport instead
+# of a socket — the same responder answers on its far half.
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+# The server half of the `Dialer` suite's TLS handshake, over the far end of a
+# `tokio::io::duplex`: it presents the checked-in leaf under `tests/fixtures/tls/`, which
+# is how that suite proves `add_root_certificate` *adds* a trust anchor (the handshake
+# succeeds with the fixture CA added and fails without it) and that SNI and verification
+# follow the URI's host rather than wherever the dialer connected. Already in the
+# lockfile — hyper-rustls's client half *is* tokio-rustls — so it adds a dependency edge
+# and not a crate. `default-features = false` plus `ring`, because its defaults are
+# `aws_lc_rs`, `logging` and `tls12`, and the first is the provider this crate's graph
+# does not carry. The server's `ServerConfig` is built with `builder_with_provider(ring)`
+# for the reason the client's is.
+tokio-rustls = { version = "0.26.5", default-features = false, features = ["ring"] }

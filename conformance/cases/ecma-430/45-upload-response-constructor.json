@@ -1,0 +1,31 @@
+{
+  "title": "The §6.4 ¶3 upload response, as the constructor for it builds one",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4 ¶3",
+    "note": "composed: this is `Message::upload_response`'s output, for the URI recorded as this case's `expect.message.submessages[0].content`. A test in `crates/conformance/tests/` calls the constructor with that string and asserts it still produces exactly this file's `canonical_json`, so the shape is pinned from both ends. §6.4 ¶3 fixes the shape — \"a message with MessageType field set to 'control' containing a submessage with the format field set of 'structured' and subformat of a URI\" — so the URI is in a *submessage* and the first submessage stays the message's own text, which is the half a bare `structured`/`uri` message cannot supply."
+  },
+  "wire": "json",
+  "input": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Send large binary content to the end-point named in the submessage below.\",\"submessages\":[{\"format\":\"structured\",\"subformat\":\"uri\",\"content\":\"https://agent.example.com/nlip/upload/9f2\"}]}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Send large binary content to the end-point named in the submessage below.",
+      "submessages": [
+        {
+          "format": "structured",
+          "subformat": "uri",
+          "content": "https://agent.example.com/nlip/upload/9f2"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Send large binary content to the end-point named in the submessage below.",
+    "canonical_json": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Send large binary content to the end-point named in the submessage below.\",\"submessages\":[{\"format\":\"structured\",\"subformat\":\"uri\",\"content\":\"https://agent.example.com/nlip/upload/9f2\"}]}"
+  },
+  "notes": "`ecma-430/27` records the same shape as a document a peer sent, with a sentence of its own for the first submessage; this one records what the constructor writes there, which is fixed and is part of what the test pins. The first submessage's text is not a rule of §6.4 — the clause says only that the response is a `control` message containing a `structured`/`uri` submessage — so an implementation whose own constructor writes a different sentence fails this case and breaks no clause. What it may not do is put the URI in the first submessage: §5.1.4 has already spoken for that one, and `/27`'s `notes` record the reading of \"subformat of a URI\" that leaves the URI a place to go."
+}

@@ -1,0 +1,30 @@
+{
+  "title": "Binary subformat whose encoding part is dots",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `binary`, \"A sender may include a . as prefix\")",
+    "note": "composed: Table 1 lets the encoding be written `.bmp`, so the dots are stripped before the emptiness test; `image/...` therefore names no encoding at all."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/...\",\n  \"content\": \"/9j/4A==\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/...",
+      "content": {
+        "$bytes": "/9j/4A=="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-encoding",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/...\",\"content\":\"/9j/4A==\"}"
+  }
+}

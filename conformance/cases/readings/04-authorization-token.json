@@ -1,0 +1,47 @@
+{
+  "title": "A token whose subformat is `authorization`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1 (row `token`), §6.2",
+    "note": "composed: §5.3 reserves exactly two prefixes, `authentication` and `conversation`; §6.2 makes every other subformat application-defined. Ecma's reference SDK spells its credential token `authorization`, which under the standard's text is an ordinary application token (README, \"Two reserved token prefixes, and only two\")."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"authorization\", \"content\": \"Bearer 2f9c\"},\n    {\"format\": \"token\", \"subformat\": \"authentication_srv\", \"content\": \"a-77ce\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "authorization",
+          "content": "Bearer 2f9c"
+        },
+        {
+          "format": "token",
+          "subformat": "authentication_srv",
+          "content": "a-77ce"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "tokens": [
+      {
+        "subformat": "authorization",
+        "content": "Bearer 2f9c",
+        "kind": "other"
+      },
+      {
+        "subformat": "authentication_srv",
+        "content": "a-77ce",
+        "kind": "authentication"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"authorization\",\"content\":\"Bearer 2f9c\"},{\"format\":\"token\",\"subformat\":\"authentication_srv\",\"content\":\"a-77ce\"}]}"
+  },
+  "notes": "The second token is there to show the contrast: same message, one token classified `other` and one `authentication`. An implementation that treats `authorization` as a credential would disagree with this case, which is exactly what it is for."
+}

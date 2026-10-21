@@ -1,0 +1,29 @@
+# `typos` runs in CI. Two settings, both to stop it arguing with things that are
+# correct here.
+
+[default]
+# British spelling throughout the prose — "licence", "serialise", "behaviour",
+# "recognise". The `en` locale accepts every regional variant; `en-us` would rewrite
+# them. The default is already `en`, and it is written down so that nobody
+# "tightens" it to `en-us` and then has to revert a hundred corrections.
+locale = "en"
+
+# Two shapes that are not words. A git commit hash cited by its seven-character prefix
+# can end in something typos reads as a word; a probe's raw header bytes
+# (`caf\xc3\xa9-1`, the UTF-8 of "café") are escaped output, not prose.
+extend-ignore-re = ["\\b[0-9a-f]{7,40}\\b", "caf\\\\x"]
+
+[files]
+extend-exclude = [
+  # The Ecma documents are not in this repository (see CONTRIBUTING.md), but a
+  # contributor who has fetched them locally would otherwise get a page of findings
+  # from standards prose that is not ours to correct.
+  "ecma-spec-md/",
+]
+
+# `conformance/` is deliberately *not* excluded. Base64 payloads and deliberately
+# malformed messages are what a spell checker usually mistakes for typos, so the
+# exclusion was written first and then measured: typos 1.50 reads all 86 files there
+# and reports nothing. The corpus is mostly prose — provenance notes and what each
+# case must do — and prose nobody checks is prose that rots. If a payload ever does
+# trip it, exclude that one file rather than the corpus.

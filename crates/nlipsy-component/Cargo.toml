@@ -1,0 +1,78 @@
+[package]
+name = "nlipsy-component"
+description = "The wit-bindgen guest for wit/nlipsy.wit, over nlipsy-protocol, nlipsy-core and nlipsy-http; never published"
+# The artefact is a wasm component, not a crate: what a consumer installs is the npm
+# package in `javascript/`, built from `target/wasm32-wasip3/component/
+# nlipsy_component.wasm`. Publishing the source of a guest whose whole content is the
+# three crates above, re-spelled in the contract's vocabulary, would put a fourth thing
+# on crates.io that nobody can depend on usefully.
+publish = false
+
+version.workspace = true
+license.workspace = true
+
+# Not `edition.workspace`/`rust-version.workspace`, and this is the workspace's one
+# exception to both. wit-bindgen 0.62's generated code is edition 2024 and past 1.85 —
+# the canonical-ABI shims it writes use syntax the 1.85 compiler rejects — so this member
+# declares its own floor and every 1.85 check excludes it by name, with the reason
+# written at the exclusion. Nothing published depends on this crate, so its floor is
+# not a promise to anyone: the six published members stay at 1.85.
+#
+# `rust-version` is the version this **crate** compiles with, and deliberately not the
+# version its *artefact* needs. The artefact is built for `wasm32-wasip3`, whose
+# `rust-std` ships on nightly until Rust 1.100 makes the target stable (2026-11-12), and
+# that is a property of the toolchain named in `COMPONENT_TOOLCHAIN` (see the `Makefile`)
+# rather than of the source here. Writing 1.100 on this line would buy nothing and cost
+# something: the crate is also an `rlib`, and `make check` on stable runs its native
+# conversion tests — a `rust-version` above the stable in use would stop that.
+edition = "2024"
+rust-version = "1.89"
+
+# Not `[lints] workspace = true`, and for one reason: the workspace forbids
+# `unsafe_code`, with `forbid` rather than `deny` precisely so that no member can opt
+# back in. Every canonical-ABI shim `wit_bindgen::generate!` writes is `unsafe`, and a
+# proc macro's tokens carry this crate's spans, so the lint fires on generated code.
+# Checked with no hand-written `unsafe` left in the crate: `[lints] workspace = true`
+# here still fails with
+# `error[E0453]: allow(unsafe_code) incompatible with previous forbid` at the generated
+# module, so the exception is the macro's and cannot be given up.
+#
+# The rest of the workspace's lints are repeated below verbatim; what is *not* repeated
+# is the forbid, and `unsafe_code` is still denied for code written by hand — see
+# `src/lib.rs`, where there is now exactly **one** `#[allow(unsafe_code)]`, on the
+# generated bindings, and none on anything written here.
+[lints.rust]
+missing_debug_implementations = "warn"
+rust_2024_compatibility = { level = "warn", priority = -1 }
+missing_docs = "warn"
+
+[lib]
+# `cdylib` is the artefact: `cargo build --target wasm32-wasip3` links one and emits a
+# component, with no `cargo-component` and no adapter of any kind — the target's `std`
+# links WASI 0.3 directly (`wasi:cli@0.3.0`, `wasi:clocks@0.3.0`) and there is no
+# `wasi:io` to adapt, because 0.3 carries streams natively.
+# `rlib` is what lets `cargo test -p nlipsy-component` run the conversion tests on the
+# *host*: wit-bindgen's generated code compiles for a native target, with every
+# canonical-ABI import replaced by an `unreachable!()` stub, so everything in this crate
+# that is a function over values — which is all of the conversions — is testable without
+# a wasm runtime.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The whole engine, in the three crates the contract is seeded from. `cbor` because
+# `types.wire` has two cases (ECMA-432 §7.1); `client` and `server` because the world
+# exports both halves — the `client` interface and the `engine` one.
+nlipsy-protocol = { workspace = true, features = ["cbor"] }
+nlipsy-core = { workspace = true, features = ["client", "server", "cbor"] }
+nlipsy-http = { workspace = true }
+# `async-spawn` for `wit_bindgen::spawn_local`, and for one thing only: a
+# `wasi:http/handler` reply carries its body as a `stream<u8>` the guest writes *after*
+# the `Response` has been returned, so the writer has to be a task of its own. It is the
+# only WASI 0.3 shape in this crate that needs a spawn.
+wit-bindgen = { workspace = true, features = ["async-spawn"] }
+# The `structured` boundary and nothing else. `types.content`'s `structured` case is the
+# canonical JSON text of an array or an object, because WIT has no recursive types
+# (`wit/nlipsy.wit`, the note on `content`), so the guest parses it on the way in and
+# writes it on the way out. `nlipsy-protocol` already builds on the same crate, and
+# `Content::to_json_value` is the spelling being read back.
+serde_json = { workspace = true }

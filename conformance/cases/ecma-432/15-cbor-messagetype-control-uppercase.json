@@ -1,0 +1,24 @@
+{
+  "title": "MessageType `Control` in upper case, over CBOR",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§10 Session management (\"manage session states using a separate message with MessageType 'Control'\"); ECMA-430 §5 ¶2, §5.1.1",
+    "note": "composed: §10 spells the reserved value `Control` where ECMA-430 §5.1.1 spells it `control`, and §5 makes capitalization irrelevant to a field's value. The bytes are `{\"MessageType\": \"Control\", \"Format\": \"text\", \"Subformat\": \"english\", \"Content\": \"Close the session.\"}` through conformance/tools/cbor_encode.py — PascalCase keys, as Annex A spells them."
+  },
+  "wire": "cbor",
+  "input_hex": "a46b4d6573736167655479706567436f6e74726f6c66466f726d6174647465787469537562666f726d617467656e676c69736867436f6e74656e7472436c6f7365207468652073657373696f6e2e",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Close the session."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Close the session.",
+    "canonical_json": "{\"messagetype\":\"Control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Close the session.\"}"
+  },
+  "notes": "The casing of the *value* is not preserved by `is_control`, which compares case-insensitively, but it is preserved in the model and in canonical_json: §5 says capitalization does not change what a value means, not that an implementation may rewrite an opaque one. Only `format` is canonicalised, because Table 1 fixes its spellings."
+}

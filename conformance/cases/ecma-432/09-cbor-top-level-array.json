@@ -1,0 +1,17 @@
+{
+  "title": "A CBOR frame whose top-level value is an array",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format; ECMA-430 §5.1",
+    "note": "composed: §7.1 says a frame \"shall contain a single NLIP message encoded in CBOR\", and §5.1 makes a message a JSON object — a map in CBOR. An array is well-formed CBOR but not a message."
+  },
+  "wire": "cbor",
+  "input_hex": "81a366666f726d6174647465787469737562666f726d617467656e676c69736867636f6e74656e746d576861742069732045636d613f",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "not-object",
+      "path": "$"
+    }
+  }
+}

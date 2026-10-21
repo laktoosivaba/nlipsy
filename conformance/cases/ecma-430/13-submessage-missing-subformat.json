@@ -1,0 +1,18 @@
+{
+  "title": "Submessage missing `subformat`, at index 1",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2.3",
+    "note": "composed: negative case for §5.2.3. The offending submessage is the second one, so the reported path is `submessages[1]` rather than `submessages[0]`."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"English\",\n  \"content\": \"Please combine the submessages.\",\n  \"submessages\": [\n    {\"format\": \"text\", \"subformat\": \"English\", \"content\": \"first\"},\n    {\"format\": \"text\", \"content\": \"second\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "missing-field",
+      "path": "submessages[1]",
+      "field": "subformat"
+    }
+  }
+}

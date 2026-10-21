@@ -1,0 +1,31 @@
+{
+  "title": "Annex A field names, spelled as the schema spells them",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "Annex A (informative), JSON Schema for NLIP Messages",
+    "note": "composed: the field names are Annex A's own spelling (MessageType, Format, Subformat, Content, Submessages, Label); the values are composed to exercise §5 \"Capitalization is not relevant to the name or value of the field\"."
+  },
+  "wire": "json",
+  "input": "{\n  \"MessageType\": \"Request\",\n  \"Format\": \"text\",\n  \"Subformat\": \"English\",\n  \"Content\": \"What is Ecma?\",\n  \"Submessages\": [\n    {\n      \"Label\": \"role\",\n      \"Format\": \"text\",\n      \"Subformat\": \"English\",\n      \"Content\": \"user\"\n    }\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "text",
+      "subformat": "English",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "label": "role",
+          "format": "text",
+          "subformat": "English",
+          "content": "user"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma? user",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"text\",\"subformat\":\"English\",\"content\":\"What is Ecma?\",\"submessages\":[{\"label\":\"role\",\"format\":\"text\",\"subformat\":\"English\",\"content\":\"user\"}]}"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "title": "Binary content that is an array",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.4, §5.3 Table 1 (row `binary`); §6.4",
+    "note": "composed: an array of sample values under `binary`, which is how a peer might try to send a sensor reading without base64. §5.1.4 requires the content to be represented as the format specifies, and Table 1 makes `binary` bytes."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"sensor/raw\",\n  \"content\": [1, 2, 3]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "sensor/raw",
+      "content": [1, 2, 3]
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"sensor/raw\",\"content\":[1,2,3]}"
+  },
+  "notes": "It decodes — the document is well-formed JSON and every required field is there — and `validate` reports an error, because nothing in the text lets an array be read as binary content. The array is still delivered, so an implementation that logs rather than rejects can look at it."
+}

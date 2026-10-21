@@ -1,0 +1,24 @@
+{
+  "title": "Label on the first submessage, and fields the standard does not define",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1, §5.2.1",
+    "note": "composed: §5.2.1 gives Label to submessages and §5.1 does not list it for the first submessage; it is accepted there rather than refused, since it carries the same meaning. Fields the standard does not define are ignored — nothing in §5 forbids them, and an end-point that refused them could not talk to a newer peer."
+  },
+  "wire": "json",
+  "input": "{\n  \"label\": \"turn-1\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"conversation_id\": \"9f21\",\n  \"Extra\": {\"vendor\": \"acme\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "label": "turn-1",
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"label\":\"turn-1\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  },
+  "notes": "canonical_json drops the undefined fields: re-encoding is not a round-trip of the document, only of the model."
+}

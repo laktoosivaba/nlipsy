@@ -1,0 +1,18 @@
+{
+  "title": "Binary content that is not base64",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4 (\"JSON Base64 encoding\"); ECMA-432 §7.2",
+    "note": "composed: negative case for the base64 rule of the JSON wire."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/jpeg\",\n  \"content\": \"not base64!!\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "base64",
+      "path": "$",
+      "field": "content"
+    }
+  }
+}

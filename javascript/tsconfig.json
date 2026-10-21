@@ -1,0 +1,32 @@
+{
+  // `strict`, and nothing turned off under it. The wrapper's whole job is to keep the
+  // boundary's shapes straight — `option<u64>` is `bigint | undefined` and `0n` is not
+  // `undefined` — and that is exactly the class of mistake `strictNullChecks` catches.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    // No source maps. `files` ships `dist/` and not `src/`, so a map beside a published
+    // module would point at a file nobody has — a broken map rather than a missing one.
+    "declarationMap": false,
+    "sourceMap": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true
+  },
+  // `src/wasm/` is jco's output. It is *read* for its `.d.ts` — which is the only
+  // description of the boundary there is — and never compiled: the glue is generated
+  // JavaScript and `scripts/build.mjs` copies it to `dist/wasm/` beside what `tsc` emits.
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/wasm/**"]
+}

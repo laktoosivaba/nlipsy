@@ -1,0 +1,72 @@
+{
+  "kind": "exchange",
+  "title": "The order this implementation echoes tokens in: the first submessage leads",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Received."
+    }
+  },
+  "request": {
+    "format": "token",
+    "subformat": "conversation_a",
+    "content": "a",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation_b",
+        "content": "b"
+      },
+      {
+        "format": "text",
+        "subformat": "english",
+        "content": "a note"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation_a",
+          "content": "a"
+        },
+        {
+          "format": "token",
+          "subformat": "conversation_b",
+          "content": "b"
+        }
+      ],
+      "canonical": {
+        "format": "text",
+        "subformat": "english",
+        "content": "Received.",
+        "submessages": [
+          {
+            "format": "token",
+            "subformat": "conversation_a",
+            "content": "a"
+          },
+          {
+            "format": "token",
+            "subformat": "conversation_b",
+            "content": "b"
+          }
+        ]
+      }
+    },
+    "findings": []
+  },
+  "notes": "The only case in the corpus that asserts the *order* of echoed tokens, and it is a reading rather than a rule. §6.2 ¶2 says which submessages must come back and says nothing about where they go, so `expect.reply.tokens` is compared as a multiset everywhere else and an implementation that appends in another order passes. This case pins the order through `expect.reply.canonical`, which compares the whole finished message: the request's *first* submessage token leads, then the tokens of the `submessages` array in arrival order. The reason is §5.1.5, which makes the order of submessages significant — so reproducing the order the peer used is the reading most likely to mean what the peer meant. A second implementation that fails only this case and passes the rest has made a different choice and not a mistake; it should say so here rather than change its code."
+}

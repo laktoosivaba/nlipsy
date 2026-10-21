@@ -1,0 +1,23 @@
+{
+  "title": "The same key twice, spelled the same way",
+  "source": {
+    "document": "ECMA-404",
+    "clause": "ECMA-404 (JSON), via ECMA-430 §4.2",
+    "note": "composed: ECMA-404 does not say what a repeated name means, and this is the one case where the corpus's raw-text `input` is load-bearing — a case format that carried parsed JSON could not express it at all."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"first\",\n  \"content\": \"second\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "second"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "second",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"second\"}"
+  },
+  "notes": "Expectation: last occurrence wins, which is what every mainstream JSON parser does. serde_json and JSON.parse both resolve an exact repeat while building the object, so the protocol layer is handed one pair and never learns there were two; an implementation could only refuse it by writing its own JSON parser, which is a cost the corpus would be imposing on every implementation — the JavaScript one included — over a case ECMA-404 assigns no meaning to at all. Two *casings* of one name are a different matter and are refused (case 01): they survive parsing as distinct keys, and it is §5 that makes them one field with two values, which is the protocol's question rather than the parser's."
+}

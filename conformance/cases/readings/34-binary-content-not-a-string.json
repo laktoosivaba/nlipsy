@@ -1,0 +1,31 @@
+{
+  "title": "Binary content that is neither bytes nor a string",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.4, §5.3 Table 1 (row `binary`); §6.4",
+    "note": "composed: on the JSON wire binary content is a base64 string, so there is nothing to decode here and nothing the content could mean. It decodes as the object it is, and validate reports an Error: §5.1.4 requires the content to be represented as the format specifies, and Table 1 makes `binary` bytes."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/jpeg\",\n  \"content\": {\"url\": \"https://agent.example.com/nlip/upload/9f2\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/jpeg",
+      "content": {
+        "url": "https://agent.example.com/nlip/upload/9f2"
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-content",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/jpeg\",\"content\":{\"url\":\"https://agent.example.com/nlip/upload/9f2\"}}"
+  },
+  "notes": "An Error, as for a non-string `text` content and on the same clause: §5.1.4 and §5.2.4 make the same demand of every format. The reading this case used to take — that a payload carried by reference is a shape the standard merely leaves undefined — does not survive §6.4, which does define how a large payload is referenced: a `control` request answered with a `control` message carrying a `structured`/`uri` submessage (case ecma-430/27). That is a different shape from a URL inside the content, so there is no reading under which this object is binary content. It still decodes, so a deployment that logs rather than rejects can see what arrived."
+}

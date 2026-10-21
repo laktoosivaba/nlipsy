@@ -1,0 +1,25 @@
+{
+  "title": "Table 1: format `generic`, subformat is a private extension",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `generic`",
+    "note": "composed: Table 1 says the subformat of `generic` \"should include the name of an extension that both client and server support\", which no rule constrains."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"generic\",\n  \"subformat\": \"acme.telemetry\",\n  \"content\": {\"rpm\": 2400, \"unit\": \"min^-1\"}\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "generic",
+      "subformat": "acme.telemetry",
+      "content": {
+        "rpm": 2400,
+        "unit": "min^-1"
+      }
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"generic\",\"subformat\":\"acme.telemetry\",\"content\":{\"rpm\":2400,\"unit\":\"min^-1\"}}"
+  }
+}

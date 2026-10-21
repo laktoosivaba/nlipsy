@@ -1,0 +1,22 @@
+{
+  "title": "Third back-end agent's answer",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.2 (\"A third one may respond as\")",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"ECMA, or European Computer Manufacturers Association, is an organization that was founded in 1962 to represent the interests of ICT (Information and Communication Technology) industries in Europe. However, it is more commonly known for its standardization work related to scripting languages, specifically JavaScript.\"}"
+  }
+}

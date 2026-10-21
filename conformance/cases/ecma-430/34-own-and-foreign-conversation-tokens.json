@@ -1,0 +1,66 @@
+{
+  "kind": "exchange",
+  "title": "The end-point's own conversation token beside the peer's, in one exchange",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2, 6.2.1",
+    "quote": "A NLIP message may contain multiple submessages with format fields of 'token'. As an example, in a communication, each of the end-points may include their own 'conversation' token and 'authentication' token that they have created, resulting in two submessages per end-point with the format field of 'token' in the message."
+  },
+  "endpoint": {
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "own": [
+        "srv-1"
+      ],
+      "issued": {
+        "conversation": "srv-1"
+      },
+      "mint": {
+        "conversation": "srv-new"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Ecma International."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "And what does TC56 do?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation",
+        "content": "srv-1"
+      },
+      {
+        "format": "token",
+        "subformat": "conversation_9.2.3.5",
+        "content": "cli-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "cli-1"
+        },
+        {
+          "format": "token",
+          "subformat": "conversation",
+          "content": "srv-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "§6.2 ¶3's \"two submessages per end-point\" arrangement, with the two rules that govern it pulling in opposite directions on the same message. `srv-1` is withheld by §6.2's exception and restored by §6.2.1's confirmation, once; `cli-1` is the peer's and comes straight back; and nothing is minted, because the peer already named the conversation. An implementation that answered \"did the peer bring a conversation token?\" with one question rather than two gets this case wrong in one of two ways — either it mints `srv-new` beside `srv-1`, or it counts `srv-1` as the peer's and drops the confirmation."
+}

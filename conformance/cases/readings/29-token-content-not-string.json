@@ -1,0 +1,43 @@
+{
+  "title": "Token content that is a number",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.2.4, §5.3 Table 1 (row `token`)",
+    "note": "composed: Table 1 calls a token's content \"an opaque token interpreted by end-points\" and does not fix its type. A number decodes, and validate reports a Warning of its own rather than the Error a non-string `text` content gets."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"conversation_9.2.3.5\", \"content\": 9060312}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": 9060312
+        }
+      ]
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/token-content",
+        "severity": "warning",
+        "path": "submessages[0]"
+      }
+    ],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "tokens": [
+      {
+        "subformat": "conversation_9.2.3.5",
+        "content": 9060312,
+        "kind": "conversation"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"conversation_9.2.3.5\",\"content\":9060312}]}"
+  },
+  "notes": "Table 1 does not say a token's content is a string, Annex A allows `Content` any type, and §6.2's echo — \"the exact same format, subformat and content\" — is as well defined for a number as for a string: it can be compared and returned unchanged. A string is what the word token means everywhere it comes from, so the finding is reported; it is a Warning because the message is still interpretable, which is what that severity means here. `ecma430-5.1.4/text-content` stays an Error and stays `text`-only: natural language that is not a string has no reading at all."
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Error message sent on the text fallback endpoint",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§11 Error handling (example)",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n  \"MessageType\":\"Error\",\n    \"Format\": \"text\",\n    \"Subformat\": \"English\",\n    \"Content\": \"CBOR decoding failed. Fallback to text recommended.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Error",
+      "format": "text",
+      "subformat": "English",
+      "content": "CBOR decoding failed. Fallback to text recommended."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "CBOR decoding failed. Fallback to text recommended.",
+    "canonical_json": "{\"messagetype\":\"Error\",\"format\":\"text\",\"subformat\":\"English\",\"content\":\"CBOR decoding failed. Fallback to text recommended.\"}"
+  },
+  "notes": "The error indication is the MessageType value `Error` on a text message — not a `format` of `error`, which is not in Table 1 (see readings/03-format-error-not-a-format). This example is the standard's own support for that reading."
+}

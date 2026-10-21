@@ -1,0 +1,31 @@
+{
+  "title": "Out-of-band transfer: the structured/uri response",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4",
+    "note": "composed: §6.4 — \"a message with MessageType field set to 'control' containing a submessage with the format field set of 'structured' and subformat of a URI\". The URI is composed."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"control\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Upload large content to the end-point in the submessage.\",\n  \"submessages\": [\n    {\"format\": \"structured\", \"subformat\": \"uri\", \"content\": \"https://agent.example.com/nlip/upload/9f2\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Upload large content to the end-point in the submessage.",
+      "submessages": [
+        {
+          "format": "structured",
+          "subformat": "uri",
+          "content": "https://agent.example.com/nlip/upload/9f2"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Upload large content to the end-point in the submessage.",
+    "canonical_json": "{\"messagetype\":\"control\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Upload large content to the end-point in the submessage.\",\"submessages\":[{\"format\":\"structured\",\"subformat\":\"uri\",\"content\":\"https://agent.example.com/nlip/upload/9f2\"}]}"
+  },
+  "notes": "\"subformat of a URI\" is ambiguous: it can be read as the Table 1 subformat value `uri`, or as the subformat field *holding* the URI. This case takes the first reading, which is the only one Table 1 supports and the only one that leaves a place for the URI itself (the content). The second reading would produce a structured-subformat warning for every such response."
+}

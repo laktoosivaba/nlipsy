@@ -1,0 +1,30 @@
+{
+  "title": "ServiceNow workflow asks to disable an account",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.5, Hybrid Cloud Integration (request)",
+    "note": "verbatim."
+  },
+  "wire": "json",
+  "input": "{\n    \"messagetype\": \"Request\",\n    \"format\": \"text\",\n    \"subformat\": \"en-us\",\n    \"content\": \"disable_ad_account\",\n    \"submessages\": [\n        {\n            \"format\": \"text\",\n            \"subformat\": \"en-us\",\n            \"content\": \"Disable all accounts related to John Acme\"\n        }\n    ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "text",
+      "subformat": "en-us",
+      "content": "disable_ad_account",
+      "submessages": [
+        {
+          "format": "text",
+          "subformat": "en-us",
+          "content": "Disable all accounts related to John Acme"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "disable_ad_account Disable all accounts related to John Acme",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"text\",\"subformat\":\"en-us\",\"content\":\"disable_ad_account\",\"submessages\":[{\"format\":\"text\",\"subformat\":\"en-us\",\"content\":\"Disable all accounts related to John Acme\"}]}"
+  }
+}

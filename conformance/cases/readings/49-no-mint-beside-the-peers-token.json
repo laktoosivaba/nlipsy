@@ -1,0 +1,51 @@
+{
+  "kind": "exchange",
+  "title": "The peer brought its own conversation identifier, so the end-point mints none",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.1",
+    "quote": "Either the client agent or the server agent may be the first one to create a submessage with format field of 'token' and the subformat field starting with 'conversation'. The other agent can optionally add another submessage with the format of 'token' and the subformat of 'conversation' if it wants to maintain its own conversation identifier. ... The agent may also include its identity after the conversation such as 'conversation_9.2.3.5' to indicate that the message was created by the agent with identity 9.2.3.5."
+  },
+  "endpoint": {
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "own": [],
+      "mint": {
+        "conversation": "srv-new"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "An international standards body."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation_9.2.3.5",
+        "content": "cli-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "cli-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "The end-point is configured to issue and does not, which is the point. §6.2.1 makes a second conversation token *optional* — \"can optionally add another submessage ... if it wants to maintain its own conversation identifier\" — and this engine exercises that option only when the peer brought none, so that a deployment keying its state on the peer's identifier is not handed a second one to store. A deployment that wants its own identifier beside the peer's mints it in its handler, and its token authority recognises it as own. `srv-new` is in the script precisely so that a mint would be visible if it happened. The peer's token comes back unchanged under §6.2, suffix and all: `_9.2.3.5` is the identity convention of the same clause, and it belongs to the agent that created it. This is a reading and not a rule, which is why the case sits here rather than under `ecma-430/`: §6.2 ¶3's own example is two conversation tokens in one message, one per end-point, and §6.2.1 grants the option in so many words. A second implementation that mints its own beside the peer's has made a different choice and not a mistake; it should say so here rather than change its code."
+}

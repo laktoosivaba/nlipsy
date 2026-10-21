@@ -1,0 +1,50 @@
+{
+  "kind": "exchange",
+  "title": "The out-of-band transfer exchange: a control request, a control response naming the upload end-point",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.4",
+    "quote": "This must be a message with the MessageType field set to 'control', and the first submessage should include a text format request for the end-point to send large uploads. The response to this request message from the server agent should be a message with MessageType field set to 'control' containing a submessage with the format field set of 'structured' and subformat of a URI."
+  },
+  "endpoint": {
+    "reply": {
+      "messagetype": "control",
+      "format": "text",
+      "subformat": "english",
+      "content": "Send large binary content to the end-point named in the submessage below.",
+      "submessages": [
+        {
+          "format": "structured",
+          "subformat": "uri",
+          "content": "https://agent.example.com/nlip/upload/9f2"
+        }
+      ]
+    }
+  },
+  "request": {
+    "messagetype": "control",
+    "format": "text",
+    "subformat": "english",
+    "content": "Please provide an end-point for large uploads."
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "messagetype": "control",
+      "control": true,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "contains": [
+        {
+          "format": "structured",
+          "subformat": "uri"
+        }
+      ],
+      "tokens": []
+    },
+    "findings": []
+  },
+  "notes": "The two messages of this case are `ecma-430/26` and `/27` as an exchange rather than as documents, and in `nlipsy-protocol` they are `Message::upload_request` and `Message::upload_response`. What only the exchange can show is the interaction with §6.3: the response already carries `MessageType: control` because §6.4 ¶3 demands it, and the boolean arrives on top of it because the request was a control message. §6.4 names `MessageType` and nothing else, so the constructor sets only that and clause 6 supplies the rest — which is why an end-point answering §6.4 conforms to §6.3 without having to think about it. `contains` rather than a whole model: the URI is the deployment's, and the shape ¶3 fixes is that a `structured`/`uri` submessage is *there*."
+}

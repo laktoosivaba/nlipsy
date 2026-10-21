@@ -1,0 +1,48 @@
+{
+  "title": "Example 1: text + audio over CBOR",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§8 Example 1: text + audio (CBOR)",
+    "note": "composed from a verbatim example: Example 1 is printed as Python pseudo-code, so it has no bytes to copy. Every field name, value and order is the example's; the audio payload `b'\\x52\\x49\\x46\\x46...'` is truncated there and is composed here as exactly the four bytes it shows, 52 49 46 46 (\"RIFF\"). The CBOR is produced by conformance/tools/cbor_encode.py from the same JSON description, with definite-length map and array heads and the field names in the order printed."
+  },
+  "wire": "cbor",
+  "input_hex": "a56b4d65737361676554797065675265717565737466466f726d61746a7374727563747572656469537562666f726d6174706170706c69636174696f6e2f6a736f6e67436f6e74656e74a166696e74656e746d776561746865725f71756572796b5375626d6573736167657382a4654c6162656c6d7472616e736372697074696f6e66466f726d6174647465787469537562666f726d617465656e2d555367436f6e74656e74782657686174277320746865207765617468657220696e2041757374696e20746f6d6f72726f773fa4654c6162656c65617564696f66466f726d61746662696e61727969537562666f726d617469617564696f2f77617667436f6e74656e744452494646",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "structured",
+      "subformat": "application/json",
+      "content": {
+        "intent": "weather_query"
+      },
+      "submessages": [
+        {
+          "label": "transcription",
+          "format": "text",
+          "subformat": "en-US",
+          "content": "What's the weather in Austin tomorrow?"
+        },
+        {
+          "label": "audio",
+          "format": "binary",
+          "subformat": "audio/wav",
+          "content": {
+            "$bytes": "UklGRg=="
+          }
+        }
+      ]
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/structured-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": "What's the weather in Austin tomorrow?",
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"structured\",\"subformat\":\"application/json\",\"content\":{\"intent\":\"weather_query\"},\"submessages\":[{\"label\":\"transcription\",\"format\":\"text\",\"subformat\":\"en-US\",\"content\":\"What's the weather in Austin tomorrow?\"},{\"label\":\"audio\",\"format\":\"binary\",\"subformat\":\"audio/wav\",\"content\":\"UklGRg==\"}]}"
+  },
+  "notes": "`structured` with subformat `application/json` is a media type, not one of Table 1's json/uri/xml/html or a programming language, so a Warning is expected — on the standard's own example. The PascalCase field names are the example's, and exercise §5 case-insensitivity over the CBOR wire too."
+}

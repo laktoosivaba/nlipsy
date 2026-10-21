@@ -1,0 +1,88 @@
+[package]
+name = "nlipsy-server"
+description = "The ECMA-431 server binding of NLIP: an axum router around a clause-6-conformant end-point"
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# has to travel inside the package rather than sit at the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they are at the package root.
+readme = "README.md"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/nlipsy-server"
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Clause 6, the handler seam and the message-level layer seam, with no socket in it.
+# This crate is one *binding* of that core — the ECMA-431 half of `runtime-plan.md`
+# §2 — and every rule it applies comes from there rather than from here.
+nlipsy-core = { workspace = true, features = ["server"] }
+# ECMA-431 §6 as values: the status map, the path, the correlator header, the media
+# type, the body limit, the two `Retry-After` directions and the two error bodies this
+# binding produces before clause 6 is reached. Shared with `nlipsy-http-client`, which
+# is the point — a client that reads a status and a server that writes one must not
+# hold two copies of the same clause.
+nlipsy-http = { workspace = true }
+# The message model: this crate decodes one on the way in and encodes one on the way
+# out, and builds `Message::error` for every refusal.
+nlipsy-protocol = { workspace = true }
+# The HTTP framework. `default-features = false` and then exactly one feature back:
+# `tokio` is what gates `ConnectInfo` and `into_make_service_with_connect_info`, which
+# is the only way a router learns the peer's address, and `Context::peer` is what
+# throttling and audit key on. `json` is deliberately off — the body is encoded by
+# `nlipsy-protocol` and decoded by it, so axum's serde integration would be a second
+# codec nothing calls — and `http1`/`http2` belong to the deployment that serves the
+# router rather than to the router.
+axum = { workspace = true }
+# One type: `LengthLimitError`, which is how `axum::body::to_bytes` says "the peer
+# sent more than the limit" as opposed to "the connection broke". Without it both are
+# one opaque error and the binding would have to answer 413 to a dropped connection.
+# Already in axum's own tree, so it adds nothing to the lockfile.
+http-body-util = { workspace = true }
+# This is a runtime, so it has somewhere to put what it learns. `nlipsy-core` returns
+# its clause-5 findings as data precisely so that the crate with the log is the one
+# that decides what a line is worth; this is that crate.
+tracing = { workspace = true }
+# The correlator this binding mints when the peer brought none. A v4 UUID rather than
+# a counter because a correlator travels between deployments — a federating endpoint
+# passes it on — and two endpoints counting from zero would collide on every trace.
+uuid = { workspace = true }
+
+[features]
+# Forwarded rather than declared, exactly as `nlipsy-core` and `nlipsy-http-client`
+# forward it: whether `Wire::Cbor` can be encoded at all is a property of the message
+# model (ECMA-432 §7.1). ECMA-431 §6 carries JSON, so nothing in this crate reads the
+# flag — it is here so that a consumer choosing its wire does not have to name the
+# core crate separately to turn the codec on.
+cbor = ["nlipsy-core/cbor", "nlipsy-http/cbor"]
+
+# `all-features` so docs.rs shows the `cbor` build; `--cfg docsrs` so that the day an
+# item here is feature-gated, its `#[cfg_attr(docsrs, doc(cfg(...)))]` banner renders
+# without a second edit.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dev-dependencies]
+# The tests drive the real `Router` through `ServiceExt::oneshot`: everything the
+# binding does to a request minus the socket.
+tower = { version = "0.5.3", features = ["util"] }
+# An executor for the handlers, and `time` for the layer tests that sleep inside one and
+# put a deadline over it. No `net`: the tests drive the real `Router` as a service and
+# never reach for a socket, so nothing here binds a listener.
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time"] }
+# The tests read the reply as JSON rather than through this crate's own decoder: a
+# fixture that agreed with a systematic misreading of clause 5 would agree with a
+# correct one just as readily.
+serde_json = { workspace = true }
+# The upload test that stores something writes into a directory that cleans itself up.
+tempfile = "3.27.0"

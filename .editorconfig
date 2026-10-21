@@ -1,0 +1,28 @@
+# Matches rustfmt's defaults, so an editor does not undo them between saves.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# GitHub workflows and Cargo manifests are conventionally two-space, and rustfmt
+# has no opinion about either.
+[*.{yml,yaml,toml}]
+indent_size = 2
+
+# Tabs are the syntax, not a style choice: a recipe line indented with spaces is
+# not a recipe.
+[Makefile]
+indent_style = tab
+
+# The npm package. Two-space is the JavaScript world's default and is what
+# `javascript/` is written in; without this stanza the four-space rule above would
+# have an editor undoing every file on save, which is the thing this file exists to
+# prevent. Named by extension rather than by path so that it holds wherever a
+# `.ts`, `.mjs` or `.json` lands.
+[*.{ts,mjs,js,json,html}]
+indent_size = 2

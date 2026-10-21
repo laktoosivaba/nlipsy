@@ -1,0 +1,18 @@
+{
+  "title": "Two NLIP messages in one CBOR frame",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 (\"shall contain a single NLIP message encoded in CBOR\")",
+    "note": "composed: the encodings of `{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"first\"}` and of the same message with `second`, concatenated. Each half is conformance/tools/cbor_encode.py output; the frame is the two halves joined, with nothing between them."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d6174647465787469737562666f726d617467656e676c69736867636f6e74656e74656669727374a366666f726d6174647465787469737562666f726d617467656e676c69736867636f6e74656e74667365636f6e64",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "cbor",
+      "path": "$"
+    }
+  },
+  "notes": "A CBOR reader stops at the end of the first item, so an implementation that never looks at the remainder decodes this as `first` and silently loses `second` — which is why the case exists. The JSON wire needs no counterpart: a JSON parser already refuses trailing characters, and §7.1's \"a single NLIP message\" is what makes the two wires answer alike. The kind is `cbor` because what is wrong is the frame, not the message inside it."
+}

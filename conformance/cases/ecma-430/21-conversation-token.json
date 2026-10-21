@@ -1,0 +1,36 @@
+{
+  "title": "Token submessage with a subformat beginning with `conversation`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.2.1",
+    "note": "composed: §6.2.1's own example of the subformat — \"such as 'conversation_9.2.3.5' to indicate that the message was created by the agent with identity 9.2.3.5\". The token content is opaque and is composed."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"What is Ecma?\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"conversation_9.2.3.5\", \"content\": \"6f1c0b12\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "6f1c0b12"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "tokens": [
+      {
+        "subformat": "conversation_9.2.3.5",
+        "content": "6f1c0b12",
+        "kind": "conversation"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"conversation_9.2.3.5\",\"content\":\"6f1c0b12\"}]}"
+  }
+}

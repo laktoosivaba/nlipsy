@@ -1,0 +1,36 @@
+{
+  "title": "Table 1: format `token`, subformat <prefix>_<suffix>",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `token`; §6.2",
+    "note": "composed: Table 1 shapes a token subformat as <prefix>_<suffix>. The prefix here is neither of the two reserved ones, which §6.2 explicitly permits."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"English\",\n  \"content\": \"Tag this exchange with the group token.\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"group_marketing\", \"content\": \"7c1f2ab0\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "English",
+      "content": "Tag this exchange with the group token.",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "group_marketing",
+          "content": "7c1f2ab0"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Tag this exchange with the group token.",
+    "tokens": [
+      {
+        "subformat": "group_marketing",
+        "content": "7c1f2ab0",
+        "kind": "other"
+      }
+    ],
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"English\",\"content\":\"Tag this exchange with the group token.\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"group_marketing\",\"content\":\"7c1f2ab0\"}]}"
+  }
+}

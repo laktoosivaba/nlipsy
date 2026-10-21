@@ -1,0 +1,22 @@
+{
+  "title": "Chat client asks a question",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.1, NLIP for Chat Interaction (first example)",
+    "note": "verbatim: copied from the standard, whitespace and all. Note that this exchange carries no messagetype field, which §11.1 points out explicitly."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "What is Ecma?"
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"What is Ecma?\"}"
+  }
+}

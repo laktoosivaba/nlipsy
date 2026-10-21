@@ -1,0 +1,36 @@
+{
+  "kind": "exchange",
+  "title": "A control request spelled as the boolean field is answered with the boolean field",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.3",
+    "quote": "If a NLIP end-point receives a message which has the control field set to true, it must respond with a NLIP Message with control field set to true."
+  },
+  "endpoint": {
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "No conversation content is retained."
+    }
+  },
+  "request": {
+    "control": true,
+    "format": "text",
+    "subformat": "english",
+    "content": "what is your privacy policy?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "control": true,
+      "messagetype": null,
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": []
+    },
+    "findings": []
+  },
+  "notes": "The end-point's handler answered with a plain text message and said nothing about control; §6.3 is what puts the field on the reply. `messagetype` stays absent, because the peer never used that spelling and §5.1.1's reserved value is a claim about a field this exchange did not have. This is the spelling TR/113's sample exchanges use — see the message-level case `ecma-430/25`."
+}

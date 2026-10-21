@@ -1,0 +1,29 @@
+{
+  "title": "Table 1: format `location`, both subformats",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1, row `location`",
+    "note": "composed: Table 1 gives `text` and `GPS` as the subformats of `location`. The GPS spelling is the table's own capitalisation; comparison is case-insensitive."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"location\",\n  \"subformat\": \"GPS\",\n  \"content\": \"46.2044,6.1432\",\n  \"submessages\": [\n    {\"format\": \"location\", \"subformat\": \"text\", \"content\": \"Geneva, Switzerland\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "location",
+      "subformat": "GPS",
+      "content": "46.2044,6.1432",
+      "submessages": [
+        {
+          "format": "location",
+          "subformat": "text",
+          "content": "Geneva, Switzerland"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"location\",\"subformat\":\"GPS\",\"content\":\"46.2044,6.1432\",\"submessages\":[{\"format\":\"location\",\"subformat\":\"text\",\"content\":\"Geneva, Switzerland\"}]}"
+  }
+}

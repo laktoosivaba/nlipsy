@@ -1,0 +1,18 @@
+{
+  "title": "Required field `format` missing",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.2, Annex A required [\"Format\", \"Subformat\", \"Content\"]",
+    "note": "composed: negative case for §5.1.2, format missing from the first submessage."
+  },
+  "wire": "json",
+  "input": "{\n  \"Subformat\": \"English\",\n  \"Content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "missing-field",
+      "path": "$",
+      "field": "format"
+    }
+  }
+}

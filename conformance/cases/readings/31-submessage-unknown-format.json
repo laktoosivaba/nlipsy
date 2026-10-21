@@ -1,0 +1,18 @@
+{
+  "title": "A submessage whose format is `video`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1",
+    "note": "composed: `video` is a binary *content kind* in Table 1's binary row, not one of the six format values — a plausible mistake, and it is reported at the submessage's own path."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Here is the clip.\",\n  \"submessages\": [\n    {\"format\": \"video\", \"subformat\": \"mp4\", \"content\": \"AAAAIGZ0eXA=\"}\n  ]\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "unknown-format",
+      "path": "submessages[0]",
+      "field": "format"
+    }
+  }
+}

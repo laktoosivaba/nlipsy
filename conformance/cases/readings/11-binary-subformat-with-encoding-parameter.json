@@ -1,0 +1,31 @@
+{
+  "title": "Binary subformat carrying an encoding parameter",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1; ECMA-432 §8 Example 3",
+    "note": "composed: `audio/wav;base64` is ECMA-432 Example 3's subformat. The content kind is `audio` and the encoding part `wav;base64` is non-empty, so nothing is reported — the crate does not parse inside the encoding part."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"audio/wav;base64\",\n  \"content\": \"UklGRg==\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "audio/wav;base64",
+      "content": {
+        "$bytes": "UklGRg=="
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/binary-encoding-parameter",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"audio/wav;base64\",\"content\":\"UklGRg==\"}"
+  },
+  "notes": "The Warning is `ecma430-5.3/binary-encoding-parameter`, not binary-content-kind (`audio` is a known kind) and not binary-encoding (the encoding part is non-empty). Paired with ecma-432/02, which records the same subformat as ECMA-432 §8 Example 3 sends it."
+}

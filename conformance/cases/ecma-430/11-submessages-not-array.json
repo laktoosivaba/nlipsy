@@ -1,0 +1,18 @@
+{
+  "title": "`Submessages` is not an array",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.5, Annex A property Submessages (\"type\": \"array\")",
+    "note": "composed: negative case for §5.1.5 — a single submessage object sent where the standard requires an array of them."
+  },
+  "wire": "json",
+  "input": "{\n  \"Format\": \"text\",\n  \"Subformat\": \"English\",\n  \"Content\": \"What is Ecma?\",\n  \"Submessages\": {\n    \"Format\": \"text\",\n    \"Subformat\": \"English\",\n    \"Content\": \"not wrapped in an array\"\n  }\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "wrong-type",
+      "path": "$",
+      "field": "submessages"
+    }
+  }
+}

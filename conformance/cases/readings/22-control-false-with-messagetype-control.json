@@ -1,0 +1,25 @@
+{
+  "title": "`control: false` together with MessageType `CONTROL`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.1, §6.3",
+    "note": "composed: the two spellings of control disagree inside one message, and the MessageType value is upper-case as well. is_control is the OR of the two spellings, so this message is a control message."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"CONTROL\",\n  \"control\": false,\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Please share your data privacy policies.\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "CONTROL",
+      "control": false,
+      "format": "text",
+      "subformat": "english",
+      "content": "Please share your data privacy policies."
+    },
+    "violations": [],
+    "is_control": true,
+    "text": "Please share your data privacy policies.",
+    "canonical_json": "{\"messagetype\":\"CONTROL\",\"control\":false,\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Please share your data privacy policies.\"}"
+  },
+  "notes": "Genuinely ambiguous: a reader who takes §6.3's field as the authority would answer false. The OR is chosen because §5.1.1 reserves the MessageType value independently of §6.3, and because treating a control message as data is the worse failure. Both spellings are preserved in canonical_json, so the disagreement is not silently resolved on the wire."
+}

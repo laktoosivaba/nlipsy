@@ -1,0 +1,51 @@
+{
+  "kind": "exchange",
+  "title": "A Conversation_9.2.3.5 subformat counts as a conversation token when deciding whether to mint",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "6.2.1",
+    "quote": "The agent may also include its identity after the conversation such as 'conversation_9.2.3.5' to indicate that the message was created by the agent with identity 9.2.3.5."
+  },
+  "endpoint": {
+    "config": {
+      "issue_conversation_token": true
+    },
+    "authority": {
+      "own": [],
+      "mint": {
+        "conversation": "srv-new"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "An international standards body."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "Conversation_9.2.3.5",
+        "content": "cli-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "tokens": [
+        {
+          "format": "token",
+          "subformat": "Conversation_9.2.3.5",
+          "content": "cli-1"
+        }
+      ]
+    },
+    "findings": []
+  },
+  "notes": "Two rules about case pull in opposite directions in one message, and the reading is that they are about different things. §5 says \"Capitalization is not relevant to the name or value of the field\", so `Conversation_9.2.3.5` starts with §6.2.1's reserved prefix and the end-point must see it as a conversation token — which is what stops it minting one of its own here. §6.2 says the echo must carry \"the exact same ... subformat\", so the capital `C` goes back unchanged. Classifying folds the case; copying does not. An implementation that compared the prefix exactly would mint `srv-new` beside the peer's identifier and leave the exchange naming two conversations; one that normalised the echo would return a subformat the peer never sent. `readings/49` is the same case in the spelling the clause prints. The no-mint half is a reading and not a rule: §6.2.1 lets the other agent add its own conversation token beside the peer's, so a second implementation that mints its own beside the peer's has made a different choice and not a mistake; it should say so here rather than change its code."
+}

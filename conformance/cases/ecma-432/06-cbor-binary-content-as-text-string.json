@@ -1,0 +1,29 @@
+{
+  "title": "Binary content sent as a CBOR text string",
+  "source": {
+    "document": "ECMA-432",
+    "clause": "§7.1 CBOR format",
+    "note": "composed: §7.1 lists String, Byte string, Array and Object as the CBOR content types and says binary uses a byte string directly, but it does not forbid a text string under a `binary` format. A peer that base64-encodes anyway, as the text fallback requires, produces exactly this. Composed as a negative-ish case: it decodes, and validate reports a Warning."
+  },
+  "wire": "cbor",
+  "input_hex": "a366666f726d61746662696e61727969737562666f726d61746a696d6167652f6a70656767636f6e74656e74682f396a2f34413d3d",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/jpeg",
+      "content": "/9j/4A=="
+    },
+    "violations": [
+      {
+        "rule": "ecma432-7.1/binary-content-text",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/jpeg\",\"content\":\"/9j/4A==\"}"
+  },
+  "notes": "This is one of the two cases where canonical_json is not a fixed point: the JSON wire cannot tell a byte string from a text string, so re-decoding the re-encoding yields bytes and no finding. A defensible alternative would be to base64-decode the text string here as the JSON wire does, which would make this case decode to bytes with no finding at all; the crate does not, because §7.1 gives the peer a byte string to use and a text string there is text."
+}

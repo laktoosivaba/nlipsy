@@ -1,0 +1,60 @@
+[package]
+name = "nlipsy-http"
+description = "ECMA-431 §6 as values: the status map, the header spellings, the two Retry-After directions and the error bodies of the NLIP HTTP binding"
+# The crate README is the crate documentation (`#![doc = include_str!(...)]`), so it
+# has to travel inside the package rather than sit at the repository root — a
+# published `.crate` that reaches outside itself does not build on docs.rs. The two
+# licence files are copies here for the same reason: Cargo only picks up licence
+# files automatically when they are at the package root.
+readme = "README.md"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/nlipsy-http"
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The message model: the two error bodies and the TR/113 §11.1 chat turn are `Message`
+# values, and nothing here encodes one — a binding does that with the codec it chose.
+nlipsy-protocol = { workspace = true }
+# For `Outcome` and `EndpointError` alone, which is what `StatusMap::of` maps. The
+# `server` feature is what carries them; nothing in this crate runs an endpoint.
+nlipsy-core = { workspace = true, features = ["server"] }
+# `StatusCode`, `HeaderName` and `HeaderValue` — the HTTP *types*, with no client and
+# no server behind them. It is the crate axum and reqwest both build on, so a value
+# produced here drops into either without a conversion, and it compiles for `wasm32`,
+# which is the property this crate exists to keep.
+http = { workspace = true }
+# The HTTP-date half of `Retry-After` (RFC 9110 §10.2.3). See the workspace entry for
+# why this and not a calendar library: it is an IMF-fixdate parser with no clock and no
+# dependencies, already in this lockfile through hyper.
+httpdate = { workspace = true }
+
+[features]
+# Forwarded rather than declared, exactly as `nlipsy-core`, `nlipsy-http-client` and
+# `nlipsy-server` forward it: whether `Wire::Cbor` can be encoded at all is a property
+# of the message model (ECMA-432 §7.1). ECMA-431 §6 carries JSON, so nothing in this
+# crate reads the flag — it is here so that a consumer choosing its wire does not have
+# to name the core crate separately to turn the codec on.
+cbor = ["nlipsy-core/cbor"]
+
+# `all-features` so docs.rs shows the `cbor` build; `--cfg docsrs` so that the day an
+# item here is feature-gated, its `#[cfg_attr(docsrs, doc(cfg(...)))]` banner renders
+# without a second edit.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dev-dependencies]
+# The `request` test compares the whole message against TR/113 §11.1's printed shape as
+# a value rather than as a string: a fixture that agreed with a systematic misreading of
+# clause 5's field order would agree with a correct one just as readily.
+serde_json = { workspace = true }

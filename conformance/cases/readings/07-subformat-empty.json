@@ -1,0 +1,28 @@
+{
+  "title": "Empty subformat",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1.3, §5.2.3",
+    "note": "composed: the field is present and is a string, so the message decodes; it carries no subcategory, which §5.2.3 requires, so validate reports an Error."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"text\",\n  \"subformat\": \"\",\n  \"content\": \"What is Ecma?\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "",
+      "content": "What is Ecma?"
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.2.3/subformat-empty",
+        "severity": "error",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": "What is Ecma?",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"\",\"content\":\"What is Ecma?\"}"
+  }
+}

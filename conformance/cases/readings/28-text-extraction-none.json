@@ -1,0 +1,38 @@
+{
+  "title": "A message with no text at all",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1",
+    "note": "composed: no submessage has the format `text`, so extraction yields null rather than an empty string."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/png\",\n  \"content\": \"iVBORw0=\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"conversation_9.2.3.5\", \"content\": \"6f1c0b12\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/png",
+      "content": {
+        "$bytes": "iVBORw0="
+      },
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "conversation_9.2.3.5",
+          "content": "6f1c0b12"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "tokens": [
+      {
+        "subformat": "conversation_9.2.3.5",
+        "content": "6f1c0b12",
+        "kind": "conversation"
+      }
+    ],
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/png\",\"content\":\"iVBORw0=\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"conversation_9.2.3.5\",\"content\":\"6f1c0b12\"}]}"
+  }
+}

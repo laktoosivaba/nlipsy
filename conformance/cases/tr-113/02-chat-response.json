@@ -1,0 +1,22 @@
+{
+  "title": "Chat server answers",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.1, NLIP for Chat Interaction (second example)",
+    "note": "verbatim, minimally repaired: the PDF extraction breaks the content string across the end of the code fence — the text resumes with \"information technology, ...\" on the next line of prose and ends with the closing quote and brace. The two halves are rejoined with the single space the line break stood for; nothing else is changed."
+  },
+  "wire": "json",
+  "input": "{\n    \"format\":\"text\",\n    \"subformat\":\"english\",\n    \"content\":\"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\" }",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing."
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.",
+    "canonical_json": "{\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Ecma International (Ecma) is an independent, non-profit, global standards organization. It develops and publishes international standards for information technology, including specifications for programming languages, data formats, and software licensing.\"}"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "kind": "exchange",
+  "title": "A reply a layer answered is not sanitised against clause 5",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "5.1.4, 6.2",
+    "quote": "If any NLIP message containing a submessage that where the format field is 'token', the end-point must include the same submessage with the exact same format, subformat and content in its response message to the peer end-point, except when the token was initially created by the end-point."
+  },
+  "endpoint": {
+    "short_circuit": true,
+    "authority": {
+      "own": []
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": {
+        "oops": 1
+      }
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "What is Ecma?"
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "canonical": {
+        "format": "text",
+        "subformat": "english",
+        "content": {
+          "oops": 1
+        }
+      }
+    },
+    "withheld": false,
+    "findings": []
+  },
+  "notes": "`readings/45`'s broken reply — a `text` message whose content is an object, which §5.1.4 does not allow — produced by a layer instead of by the handler, and this time it goes out as written. The outbound sanitiser belongs to the step that finishes a handler's answer. The composer re-applies the three idempotent obligations to every reply, whether or not that step ran, and deliberately does not re-apply clause 5 with them — because on the ordinary path the reply has already been sanitised and already carries the peer's echoed tokens, so a second pass would report the peer's own token-content warning again and, under an outbound policy of `on_warning: reject`, replace a good reply with an error (`crates/nlipsy-core/src/serve.rs`, the comment above `conformity.close` in `serve_answered`: \"`sanitise` is deliberately *not* re-run\"). The price is paid here, on the reply that step never saw. The consequence is recorded here rather than hidden: nothing was withheld, no finding was reported, and a malformed reply reached the peer because a layer wrote one. A layer that breaks clause 5 after answering on its own is its deployment's bug, and the corpus says so instead of pretending the engine catches it. This is a reading and not a rule — ECMA-430 states clause 5 and says nothing about the consequence of breaking it, which is what `endpoint.rejection` exists for at all — so a second implementation that sanitises a short-circuited reply, and therefore produces `readings/45`'s replacement here, has made a different choice and not a mistake; it should say so in this file rather than change its code. The shape records exactly that: the sanitiser is what a short-circuited reply does not get."
+}

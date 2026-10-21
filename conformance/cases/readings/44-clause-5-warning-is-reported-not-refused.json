@@ -1,0 +1,53 @@
+{
+  "kind": "exchange",
+  "title": "A warning-level finding in the request is reported and the exchange proceeds",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "5.3, 6",
+    "quote": "The following behaviors are required to be supported by an end-point in response to the receipt of various fields."
+  },
+  "endpoint": {
+    "rejection": {
+      "inbound": {
+        "on_error": "reject",
+        "on_warning": "log"
+      }
+    },
+    "reply": {
+      "format": "text",
+      "subformat": "english",
+      "content": "Heard."
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "english",
+    "content": "Listen to this.",
+    "submessages": [
+      {
+        "format": "binary",
+        "subformat": "audio/wav;base64",
+        "content": "UklGRg=="
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "reply",
+    "reply": {
+      "first_submessage": {
+        "format": "text",
+        "subformat": "english"
+      },
+      "tokens": []
+    },
+    "findings": [
+      {
+        "direction": "inbound",
+        "rule": "ecma430-5.3/binary-encoding-parameter",
+        "severity": "warning",
+        "path": "submessages[0]"
+      }
+    ]
+  },
+  "notes": "The pair to `readings/43`, with the same default policy and the other severity. `audio/wav;base64` is ECMA-432 §8 Example 3's own subformat, where `;base64` is a parameter rather than the encoding Table 1 asks for — the committee's example breaks the committee's table, which is why the finding is a warning and why refusing it would mean refusing messages the standard prints. The finding is still *reported*: `direction` is `inbound`, because it is about the peer's message rather than the end-point's own, and the two directions have separate policies for exactly that reason. The message-level cases are `readings/11` and `ecma-432/02`."
+}

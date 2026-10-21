@@ -1,0 +1,25 @@
+{
+  "title": "Binary content without padding",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.4; ECMA-432 §7.2",
+    "note": "composed: six base64 characters that would need `==` to be padded. Padding is accepted but not required on input; re-encoding always pads, which canonical_json shows."
+  },
+  "wire": "json",
+  "input": "{\n  \"format\": \"binary\",\n  \"subformat\": \"image/jpeg\",\n  \"content\": \"/9j/4A\"\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "format": "binary",
+      "subformat": "image/jpeg",
+      "content": {
+        "$bytes": "/9j/4A=="
+      }
+    },
+    "violations": [],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"format\":\"binary\",\"subformat\":\"image/jpeg\",\"content\":\"/9j/4A==\"}"
+  },
+  "notes": "Also covers the two non-alphanumeric characters of the standard alphabet, `+` and `/` — here `/` twice."
+}

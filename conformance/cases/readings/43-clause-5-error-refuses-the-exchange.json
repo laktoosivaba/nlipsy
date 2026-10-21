@@ -1,0 +1,43 @@
+{
+  "kind": "exchange",
+  "title": "A request the message model cannot interpret is refused before clause 6 runs",
+  "provenance": {
+    "standard": "ECMA-430",
+    "clause": "5.2.3, 6",
+    "quote": "The following behaviors are required to be supported by an end-point in response to the receipt of various fields."
+  },
+  "endpoint": {
+    "rejection": {
+      "inbound": {
+        "on_error": "reject",
+        "on_warning": "log"
+      }
+    },
+    "config": {
+      "max_tokens_per_message": 32
+    }
+  },
+  "request": {
+    "format": "text",
+    "subformat": "",
+    "content": "hi",
+    "submessages": [
+      {
+        "format": "token",
+        "subformat": "conversation",
+        "content": "c-1"
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "refused",
+    "refused": {
+      "kind": "violations",
+      "rules": [
+        "ecma430-5.2.3/subformat-empty"
+      ]
+    },
+    "findings": []
+  },
+  "notes": "What a clause-5 finding *does* is nowhere in the standard: ECMA-430 states the rules and says nothing about the consequence, so an end-point that rejects and one that logs are both defensible and the choice is a deployment's. This case records the default — reject on an error, log on a warning — and, more importantly, the order: clause 5 is applied before clause 6's token ceiling, because a message that cannot be interpreted has no meaningful token count and counting first would refuse it for the wrong reason. The message-level case for this finding is `readings/07`. The request carries a token that is *not* echoed, because there is no reply to echo it into; a runtime answering this refusal with an error message owes the peer that echo separately. The obligation is §6.2 ¶2's, which is clause 6's; what is the binding's is *discharging* it on a path the wrapper does not cover, through `Conformity::close`."
+}

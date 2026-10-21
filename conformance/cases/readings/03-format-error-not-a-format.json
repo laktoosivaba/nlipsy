@@ -1,0 +1,18 @@
+{
+  "title": "`format` of `error`",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.3 Table 1",
+    "note": "composed: negative case for Table 1. Ecma's reference Python SDK emits `format: \"error\"`; Table 1 lists six values and `error` is not among them, so the crate rejects it (README, \"format: 'error' is not a format\"). The error indication the standard does show is MessageType `Error` on a text message — ECMA-432 §11, case ecma-432/05-error-message."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"Error\",\n  \"format\": \"error\",\n  \"subformat\": \"english\",\n  \"content\": \"CBOR decoding failed. Fallback to text recommended.\"\n}",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "unknown-format",
+      "path": "$",
+      "field": "format"
+    }
+  }
+}

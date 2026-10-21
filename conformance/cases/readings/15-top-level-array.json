@@ -1,0 +1,17 @@
+{
+  "title": "A JSON array at the top level",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§5.1 (\"The first submessage ... is a JSON object\")",
+    "note": "composed: valid JSON, but not a message. A plausible mistake: sending the submessages array on its own."
+  },
+  "wire": "json",
+  "input": "[{\"format\": \"text\", \"subformat\": \"english\", \"content\": \"What is Ecma?\"}]",
+  "expect": {
+    "decode": "error",
+    "error": {
+      "kind": "not-object",
+      "path": "$"
+    }
+  }
+}

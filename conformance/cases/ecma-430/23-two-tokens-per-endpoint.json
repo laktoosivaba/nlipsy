@@ -1,0 +1,69 @@
+{
+  "title": "Two tokens per end-point, one conversation and one authentication each",
+  "source": {
+    "document": "ECMA-430",
+    "clause": "§6.2",
+    "note": "composed: §6.2 — \"each of the end-points may include their own 'conversation' token and 'authentication' token that they have created, resulting in two submessages per end-point\". §5.1.5 makes the order significant, so the four tokens are expected back in this order."
+  },
+  "wire": "json",
+  "input": "{\n  \"messagetype\": \"Request\",\n  \"format\": \"text\",\n  \"subformat\": \"english\",\n  \"content\": \"Continue the session.\",\n  \"submessages\": [\n    {\"format\": \"token\", \"subformat\": \"conversation_client\", \"content\": \"c-9f21\"},\n    {\"format\": \"token\", \"subformat\": \"authentication_client\", \"content\": \"a-4b70\"},\n    {\"format\": \"token\", \"subformat\": \"conversation_server\", \"content\": \"c-1d05\"},\n    {\"format\": \"token\", \"subformat\": \"authentication_server\", \"content\": \"a-77ce\"}\n  ]\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "message_type": "Request",
+      "format": "text",
+      "subformat": "english",
+      "content": "Continue the session.",
+      "submessages": [
+        {
+          "format": "token",
+          "subformat": "conversation_client",
+          "content": "c-9f21"
+        },
+        {
+          "format": "token",
+          "subformat": "authentication_client",
+          "content": "a-4b70"
+        },
+        {
+          "format": "token",
+          "subformat": "conversation_server",
+          "content": "c-1d05"
+        },
+        {
+          "format": "token",
+          "subformat": "authentication_server",
+          "content": "a-77ce"
+        }
+      ]
+    },
+    "violations": [],
+    "is_control": false,
+    "text": "Continue the session.",
+    "tokens": [
+      {
+        "subformat": "conversation_client",
+        "content": "c-9f21",
+        "kind": "conversation"
+      },
+      {
+        "subformat": "authentication_client",
+        "content": "a-4b70",
+        "kind": "authentication"
+      },
+      {
+        "subformat": "conversation_server",
+        "content": "c-1d05",
+        "kind": "conversation"
+      },
+      {
+        "subformat": "authentication_server",
+        "content": "a-77ce",
+        "kind": "authentication"
+      }
+    ],
+    "token_count": 4,
+    "canonical_json": "{\"messagetype\":\"Request\",\"format\":\"text\",\"subformat\":\"english\",\"content\":\"Continue the session.\",\"submessages\":[{\"format\":\"token\",\"subformat\":\"conversation_client\",\"content\":\"c-9f21\"},{\"format\":\"token\",\"subformat\":\"authentication_client\",\"content\":\"a-4b70\"},{\"format\":\"token\",\"subformat\":\"conversation_server\",\"content\":\"c-1d05\"},{\"format\":\"token\",\"subformat\":\"authentication_server\",\"content\":\"a-77ce\"}]}"
+  },
+  "notes": "`token_count` is what §6.2's ceiling is applied to, and this is the message the clause's own example describes — \"two submessages per end-point\", four in all. Here it equals the length of `tokens`, because the first submessage is text; `readings/36` is where the two differ, which is the reason the count is an expectation of its own rather than something a runner derives from the list."
+}

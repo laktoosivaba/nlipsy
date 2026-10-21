@@ -1,0 +1,37 @@
+{
+  "title": "Channel recommender agent returns structured content",
+  "source": {
+    "document": "Ecma TR/113",
+    "clause": "§11.3 Figure 10, NLIP message format for Reddit Channels Agent",
+    "note": "verbatim, minimally repaired: the figure is missing the comma after the `subreddits` array and the closing quote of the `prompt` string. Both are added and nothing else is changed."
+  },
+  "wire": "json",
+  "input": "{\n    \"control\": false,\n    \"format\": \"structured\",\n    \"subformat\": \"english\",\n    \"content\": {\n        \"subreddits\": [\"r/ibm\", \"r/technology\", \"r/quantum\"],\n        \"prompt\": \"What are the common issues with IBM Cloud?\"\n    },\n    \"submessages\": []\n}",
+  "expect": {
+    "decode": "ok",
+    "message": {
+      "control": false,
+      "format": "structured",
+      "subformat": "english",
+      "content": {
+        "subreddits": [
+          "r/ibm",
+          "r/technology",
+          "r/quantum"
+        ],
+        "prompt": "What are the common issues with IBM Cloud?"
+      }
+    },
+    "violations": [
+      {
+        "rule": "ecma430-5.3/structured-subformat",
+        "severity": "warning",
+        "path": "$"
+      }
+    ],
+    "is_control": false,
+    "text": null,
+    "canonical_json": "{\"control\":false,\"format\":\"structured\",\"subformat\":\"english\",\"content\":{\"prompt\":\"What are the common issues with IBM Cloud?\",\"subreddits\":[\"r/ibm\",\"r/technology\",\"r/quantum\"]}}"
+  },
+  "notes": "`\"format\": \"structured\"` with `\"subformat\": \"english\"` — a natural language where Table 1 expects json, uri, xml, html or the name of a programming language. Reported as a Warning: the content really is structured, and rejecting it would reject a committee figure."
+}
